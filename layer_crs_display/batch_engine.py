@@ -211,7 +211,11 @@ class BatchRunner(QObject):
 
     def _publish(self):
         kind, name = self.current['kind'], self.current['output_name']
-        load = lambda path: QgsVectorLayer(str(path), name, 'ogr') if kind == 'vector' else QgsRasterLayer(str(path), name, 'gdal')
+        def load(path):
+            if kind == 'vector':
+                return QgsVectorLayer(str(path), name, 'ogr')
+            return QgsRasterLayer(str(path), name, 'gdal')
+
         check = load(self.staged_file)
         if not check.isValid() or check.crs() != self.target:
             raise ValueError('No valid output in the target CRS was produced.')

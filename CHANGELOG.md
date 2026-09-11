@@ -1,3 +1,10 @@
+# 0.5.4 — code quality fix (experimental)
+
+- Replace the assigned layer-loading lambda with a named function (Flake8 E731).
+- Keep output behavior and the declared QGIS 3 compatibility range unchanged.
+- The separately reported Qt6 migration findings are not addressed by this release;
+  QGIS 4 support still requires migration and native testing.
+
 # 0.5.3 — installation packaging fix (experimental)
 
 - Keep the native acceptance script in the source repository, outside the installed plugin.

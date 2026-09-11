@@ -1,4 +1,4 @@
-# Layer CRS Display — 0.5.3
+# Layer CRS Display — 0.5.4
 
 Maintainer: GeoForge Studio | QGIS 3.22–3.x (declared range; native validation pending)
 
@@ -11,7 +11,7 @@ All plugin interface text, tooltips, messages and documentation are in English. 
 
 ## Quick start
 
-1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.5.3.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
+1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.5.4.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
 2. Click **Reproject**. The target CRS initially follows the project CRS and can be changed.
 3. Choose one output folder, a GeoPackage filename (default `reprojected.gpkg`) and a layer name suffix, such as `_UTM39`. `Roads` becomes `Roads_UTM39`. No numbering or prefix is automatically added.
 4. Eligible layers with a different CRS are initially selected. Use **Use panel selection** to use the Layers panel selection, or change checkboxes individually.
@@ -86,7 +86,7 @@ claim compatibility with a QGIS version until it has been tested.
 
 ## Publication status
 
-Version 0.5.3 is an **experimental release candidate**, not an approved QGIS plugin.
+Version 0.5.4 is an **experimental release candidate**, not an approved QGIS plugin.
 Source code and support are hosted at
 [geoforge-studio/layer-crs-display](https://github.com/geoforge-studio/layer-crs-display).
 The public contact email is `reynolds.mach88@gmail.com`. Native QGIS acceptance

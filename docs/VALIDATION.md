@@ -1,3 +1,16 @@
+# Validation of candidate 0.5.4
+
+- PASS: extracted installation ZIP, Flake8 7.3.0 E731 check: zero findings.
+- PASS: extracted installation ZIP, Bandit 1.9.4 default rules: zero findings
+  and zero scan errors, without rule suppressions.
+- PASS: Python syntax of every installed Python file.
+- Only the layer-loading helper syntax changed; output behavior is unchanged.
+- No new native QGIS test run was performed for this small refactor.
+- The portal's 48 Qt6 migration findings remain outside this QGIS 3 release.
+  Do not treat a clean security scan as proof of QGIS 4 compatibility.
+
+## Previous checks
+
 # Validation of candidate 0.5.3
 
 - Reproduced the uploaded 0.5.2 scan locally with Bandit 1.9.4: 9 Python
