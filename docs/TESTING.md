@@ -34,11 +34,11 @@ exec(compile(script.read_text(encoding='utf-8'), str(script), 'exec'))
 
 The script creates temporary input data in an independent project, converts a
 point from EPSG:4326 to EPSG:32639 (expected 500000, 0 at longitude 51, latitude 0),
-checks a categorical raster and NoData, and verifies unchanged input data.
+checks two named vector layers in one GeoPackage, excludes an already matching CRS, checks a categorical raster and NoData, and verifies unchanged input data.
 Do not close QGIS while it is running. If a provider hangs, cancellation may take
 time; the test waits for the task to finish before freeing its context.
 
-5. Run small real vector and raster batches through the dialog. Test an existing
+5. Run a batch containing two vector layers needing conversion and one already in the target CRS. Confirm that exactly one GeoPackage contains only the two converted layers and that both load using their own layer names. Repeat with a custom GeoPackage filename and with raster inputs (GeoTIFF). Run small real vector and raster batches through the dialog. Test an existing
    output conflict, cancellation, filtered input, custom suffix, missing source
    CRS and a transformation requiring a locally installed datum grid.
 6. Record QGIS, Qt, GDAL and OS versions, results and any traceback. Do not mark

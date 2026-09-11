@@ -27,7 +27,9 @@ class CRS:
 class Vector:
     def __init__(self,path,name,provider='ogr'):
         self.path,self.title,self.provider=path,name,provider
-        self.data=json.loads(Path(path).read_text()) if Path(path).is_file() else {}
+        filename, _, table = path.partition('|layername=')
+        self.data=json.loads(Path(filename).read_text()) if Path(filename).is_file() else {}
+        if table:self.data=self.data.get('layers',{}).get(table,{})
     def id(self):return self.path
     def name(self):return self.title
     def setName(self,name):self.title=name
@@ -104,6 +106,7 @@ class Style:
 class Task(QtCore.QObject):
     executed=QtCore.pyqtSignal(bool,object)
     calls=[]
+    package_fault=''
     def __init__(self,algorithm,params,context,feedback):
         super().__init__();self.params=params;self.feedback=feedback;self.cancelled=False;self.algorithm=algorithm
     def setDependentLayers(self,x):pass
@@ -111,6 +114,13 @@ class Task(QtCore.QObject):
     def isCanceled(self):return self.cancelled
     def execute(self):
         Task.calls.append((self.algorithm,self.params.copy()))
+        if self.algorithm == 'native:package':
+            data = {'layers': {layer.name(): layer.data for layer in self.params['LAYERS']}}
+            if Task.package_fault == 'missing_layer':
+                data['layers'].pop(next(iter(data['layers'])))
+            Path(self.params['OUTPUT']).write_text(json.dumps(data))
+            self.executed.emit(Task.package_fault != 'fail', {'OUTPUT': self.params['OUTPUT']})
+            return
         data=self.params['INPUT'].data.copy()
         data['crs']=self.params['TARGET_CRS'].authid()
         if data.get('bad_crs'):data['crs']='EPSG:4326'
@@ -128,10 +138,18 @@ for name,value in dict(QgsCoordinateReferenceSystem=CRS,QgsVectorLayer=Vector,Qg
     QgsProcessingAlgRunnerTask=Task,QgsApplication=types.SimpleNamespace(processingRegistry=lambda:registry,taskManager=lambda:manager)).items():setattr(core,name,value)
 gui.QgsProjectionSelectionWidget=ProjectionWidget
 
-from layer_crs_display.batch_engine import BatchRunner, eligibility
+from layer_crs_display.batch_engine import BatchRunner, eligibility, same_crs
 from layer_crs_display.batch_dialog import BatchDialog
 from layer_crs_display.batch_logic import plan_outputs
 app=QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+assert same_crs(CRS('EPSG:32639'), CRS('EPSG:32639'))
+assert not same_crs(CRS('EPSG:32639'), CRS('EPSG:32739'))
+assert not same_crs(CRS(), CRS())
+epoch_a, epoch_b = CRS('EPSG:32639'), CRS('EPSG:32639')
+epoch_a.coordinateEpoch = lambda: 2020.0
+epoch_b.coordinateEpoch = lambda: 2021.0
+assert not same_crs(epoch_a, epoch_b)
 
 # Exercise actual plugin methods for upgrade compatibility, with fake registry
 # types only. Existing unrelated layer-widget entries must survive migration.
@@ -223,17 +241,36 @@ with tempfile.TemporaryDirectory() as temp:
     runner.start(plans([a],root/'out'),CRS('EPSG:32639'),hide_sources=True,project_crs=True)
     wait(runner)
     assert runner.results[0]['status']=='success'
-    assert (root/'out/roads_39.gpkg').exists()
+    assert (root/'out/reprojected.gpkg').exists()
     assert a.crs()==CRS('EPSG:4326') and a.name()=='roads'
     assert not project.nodes[a.id()].visible
     assert len(project.layers)==2
-    assert Task.calls[-1][0]=='native:reprojectlayer'
-    saved=(root/'out/roads_39.gpkg').read_bytes()
+    assert Task.calls[-1][0]=='native:package'
+    assert not Task.calls[-1][1]['EXPORT_RELATED_LAYERS']
+    saved=(root/'out/reprojected.gpkg').read_bytes()
     # Late file collision after planning must not overwrite.
     stale=plans([a],root/'out');stale[0]['error']=''
     runner.start(stale,CRS('EPSG:32639'));wait(runner)
     assert runner.results[0]['status']=='failed'
-    assert (root/'out/roads_39.gpkg').read_bytes()==saved
+    assert (root/'out/reprojected.gpkg').read_bytes()==saved
+
+    # Multiple converted layers share exactly one file; same-CRS input is skipped
+    # even if a stale or external caller explicitly includes it in the plans.
+    out=root/'shared';out.mkdir();b=source(root,'rivers')
+    runner=BatchRunner(Project([a,b,same]));before_calls=len(Task.calls)
+    runner.start(plans([a,same,b],out),CRS('EPSG:32639'));wait(runner)
+    assert [r['status'] for r in runner.results]==['success','skipped','success'],runner.results
+    assert list(out.glob('*.gpkg'))==[out/'reprojected.gpkg']
+    assert set(json.loads((out/'reprojected.gpkg').read_text())['layers'])=={'roads_39','rivers_39'}
+    assert len([c for c in Task.calls[before_calls:] if c[0]=='native:reprojectlayer'])==2
+    assert runner.results[0]['output_uri'].endswith('|layername=roads_39')
+    assert len(runner.project.layers)==5
+    assert not list(out.glob('crs_stage_*'))
+
+    out=root/'all_same';out.mkdir();runner=BatchRunner(Project([same]));before_calls=len(Task.calls)
+    runner.start(plans([same],out),CRS('EPSG:32639'));wait(runner)
+    assert runner.results[0]['status']=='skipped'
+    assert len(Task.calls)==before_calls and not list(out.glob('*.gpkg'))
 
     # Failure in one row doesn't prevent the next; no partial final publication.
     for fault in ['fail','bad_crs','bad_count','report_error']:
@@ -241,6 +278,7 @@ with tempfile.TemporaryDirectory() as temp:
         runner=BatchRunner(Project([bad,good]));runner.start(plans([bad,good],out),CRS('EPSG:32639'));wait(runner)
         assert [r['status'] for r in runner.results]==['failed','success'],runner.results
         assert not (out/(fault+'_39.gpkg')).exists()
+        assert set(json.loads((out/'reprojected.gpkg').read_text())['layers'])=={'good_'+fault+'_39'}
         assert not list(out.glob('crs_stage_*'))
 
     # Immediate cancel and mid-task cancel do not publish final files.
@@ -250,7 +288,32 @@ with tempfile.TemporaryDirectory() as temp:
         runner.start(plans([a],out),CRS('EPSG:32639'))
         if not midway:runner.cancel()
         wait(runner);assert runner.results[0]['status']=='cancelled'
-        assert not (out/'roads_39.gpkg').exists()
+        assert not (out/'reprojected.gpkg').exists()
+
+    # Package failure, incomplete packaging and packaging cancellation must not
+    # expose a partial final container or hide sources.
+    for fault in ('fail','missing_layer','cancel'):
+        out=root/('package_'+fault);out.mkdir();runner=BatchRunner(Project([a,b]))
+        Task.package_fault=fault
+        if fault=='cancel':
+            runner.rowChanged.connect(lambda key,status,text:runner.cancel() if status=='packaging' else None)
+        runner.start(plans([a,b],out),CRS('EPSG:32639'),hide_sources=True);wait(runner)
+        assert all(r['status']==('cancelled' if fault=='cancel' else 'failed') for r in runner.results)
+        assert not list(out.glob('*.gpkg')) and not list(out.glob('crs_stage_*'))
+        assert all(node.visible for node in runner.project.nodes.values())
+    Task.package_fault=''
+
+    out=root/'cancel_staged';out.mkdir();runner=BatchRunner(Project([a,b]))
+    runner.rowChanged.connect(lambda key,status,text:runner.cancel() if status=='staged' else None)
+    runner.start(plans([a,b],out),CRS('EPSG:32639'));wait(runner)
+    assert all(r['status']=='cancelled' for r in runner.results)
+    assert not list(out.glob('*.gpkg')) and not list(out.glob('crs_stage_*'))
+
+    # A competing file created during packaging must be left untouched.
+    out=root/'package_collision';out.mkdir();runner=BatchRunner(Project([a]))
+    runner.rowChanged.connect(lambda key,status,text:(out/'reprojected.gpkg').write_bytes(b'keep') if status=='packaging' else None)
+    runner.start(plans([a],out),CRS('EPSG:32639'));wait(runner)
+    assert runner.results[0]['status']=='failed' and (out/'reprojected.gpkg').read_bytes()==b'keep'
 
     # Raster parameters reach the GDAL warp task (still a fake provider).
     out=root/'raster';out.mkdir()
@@ -265,4 +328,4 @@ with tempfile.TemporaryDirectory() as temp:
     assert params['SOURCE_CRS']==CRS('EPSG:4326') and params['DATA_TYPE']==0
     assert (out/'image_39.tif').exists()
 
-print('PASS: widget migration retains unrelated IDs; real Qt at 3 viewport sizes; fake GIS tasks verify success, failure continuation, CRS/count checks, reported transform error, cancellation and collision protection. No native reprojection tested.')
+print('PASS: real Qt at 3 sizes; widget migration; simulated GIS verifies one shared GeoPackage, same-CRS exclusion, distinct layer URIs, CRS/count checks, failure continuation, packaging failures/cancellation, late collisions and raster parameters. No native reprojection tested.')

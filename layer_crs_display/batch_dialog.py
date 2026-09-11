@@ -11,7 +11,7 @@ from qgis.PyQt.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
 from qgis.core import QgsProject, QgsSettings
 from qgis.gui import QgsProjectionSelectionWidget
 
-from .batch_engine import BatchRunner, eligibility, layer_kind
+from .batch_engine import BatchRunner, eligibility, layer_kind, same_crs
 from .batch_logic import plan_outputs, output_names
 
 SETTINGS = 'GeoForge/LayerCrsDisplay/batch/'
@@ -136,6 +136,10 @@ class BatchDialog(QDialog):
         folder_layout.addWidget(self.folder, 1)
         folder_layout.addWidget(browse)
         form.addRow('Output folder', folder_box)
+        self.gpkg = QLineEdit('reprojected.gpkg')
+        self.gpkg.setMinimumWidth(0)
+        self.gpkg.setToolTip('One shared GeoPackage for all converted vector layers.')
+        form.addRow('GeoPackage name', self.gpkg)
         self.suffix = QLineEdit()
         self.suffix.setPlaceholderText('_UTM39')
         self.suffix.setMinimumWidth(0)
@@ -144,7 +148,7 @@ class BatchDialog(QDialog):
         self.name_example = label('')
         self.name_example.setObjectName('muted')
         setup.addWidget(self.name_example)
-        formats = label('Vector → GeoPackage    •    Raster → GeoTIFF\nOriginal files are kept. Existing outputs are never overwritten.')
+        formats = label('Converted vectors → one shared GeoPackage    •    Converted rasters → GeoTIFF\nLayers already in the target CRS are not copied. Existing outputs are never overwritten.')
         formats.setObjectName('muted')
         setup.addWidget(formats)
 
@@ -256,6 +260,7 @@ class BatchDialog(QDialog):
         self.suffix.textEdited.connect(self.custom_suffix)
         self.suffix.textChanged.connect(self.preview)
         self.folder.textChanged.connect(self.preview)
+        self.gpkg.textChanged.connect(self.preview)
         self.table.itemChanged.connect(self.selection_edited)
         self.target_changed()
 
@@ -343,6 +348,7 @@ class BatchDialog(QDialog):
             if self.table.item(row, 0).checkState() != Qt.Checked: continue
             layer = self.project.mapLayer(layer_id)
             if layer is None: raise ValueError('A layer has been removed. Refresh the list.')
+            if same_crs(layer.crs(), self.target.crs()): continue
             problem = eligibility(layer, self.target.crs())
             if problem: raise ValueError(layer.name() + ': ' + problem)
             items.append(dict(layer_id=layer_id, name=layer.name(), kind=layer_kind(layer), source_wkt=layer.crs().toWkt()))
@@ -352,7 +358,7 @@ class BatchDialog(QDialog):
         if self.refreshing or self.runner.active: return
         self.table.blockSignals(True)
         try:
-            plans = plan_outputs(self.selected_items(), self.folder.text(), self.suffix.text())
+            plans = plan_outputs(self.selected_items(), self.folder.text(), self.suffix.text(), self.gpkg.text())
             by_id = {p['layer_id']:p for p in plans}
             for row, layer_id in enumerate(self.layer_ids):
                 plan = by_id.get(layer_id)
@@ -361,7 +367,9 @@ class BatchDialog(QDialog):
                         self.table.item(row,col).setText(text)
                         if col == 5:
                             self.table.item(row,col).setForeground(QBrush(QColor('#ad3737' if plan['error'] else '#176d58')))
-                        self.table.item(row,col).setToolTip(plan['output_path'] if col==4 else text)
+                        self.table.item(row,col).setToolTip(
+                            plan['output_path'] + (' | layer: ' + plan['output_layer'] if plan['output_layer'] else '')
+                            if col==4 else text)
                 elif self.table.item(row,0).data(Qt.UserRole):
                     for col in (3,4): self.table.item(row,col).setText('')
                     self.table.item(row,5).setText('Not selected')
@@ -390,7 +398,7 @@ class BatchDialog(QDialog):
 
     def run(self):
         try:
-            plans = plan_outputs(self.selected_items(), self.folder.text(), self.suffix.text())
+            plans = plan_outputs(self.selected_items(), self.folder.text(), self.suffix.text(), self.gpkg.text())
             if not Path(self.folder.text()).is_dir(): raise ValueError('Choose a valid output folder.')
             QgsSettings().setValue(SETTINGS+'folder', self.folder.text())
             self.runner.start(plans,self.target.crs(),self.resampling.currentData(),self.add.isChecked(),self.hide.isChecked(),self.project_target.isChecked())
@@ -408,10 +416,12 @@ class BatchDialog(QDialog):
     def cancel(self):
         self.runner.cancel()
         self.cancel_button.setEnabled(False)
-        self.status.setText('Stopping… Completed outputs will be retained.')
-        self.footer_status.setText('Stopping… Completed outputs are kept.')
+        self.status.setText('Stopping… Saved rasters are kept. Unsaved vector outputs are discarded.')
+        self.footer_status.setText('Stopping… Waiting for the active task.')
 
     def on_row(self, layer_id, status, text):
+        if status == 'packaging':
+            self.footer_status.setText('Saving converted vector layers into one GeoPackage…')
         if layer_id in self.layer_ids:
             item = self.table.item(self.layer_ids.index(layer_id),5)
             item.setText(text)
@@ -420,9 +430,9 @@ class BatchDialog(QDialog):
 
     def on_finished(self, results, report):
         self.busy(False)
-        counts = {key:sum(r['status']==key for r in results) for key in ('success','failed','cancelled')}
-        self.footer_status.setText('{success} succeeded • {failed} failed • {cancelled} cancelled'.format(**counts))
-        self.status.setText('Succeeded: {success} | Failed: {failed} | Cancelled: {cancelled}\nReport: '.format(**counts)+report+'\nClick Refresh before starting another batch.')
+        counts = {key:sum(r['status']==key for r in results) for key in ('success','failed','cancelled','skipped')}
+        self.footer_status.setText('{success} succeeded • {failed} failed • {cancelled} cancelled • {skipped} skipped'.format(**counts))
+        self.status.setText('Succeeded: {success} | Failed: {failed} | Cancelled: {cancelled} | Skipped: {skipped}\nReport: '.format(**counts)+report+'\nClick Refresh before starting another batch.')
         self.run_button.setEnabled(False)
 
     def reject(self):

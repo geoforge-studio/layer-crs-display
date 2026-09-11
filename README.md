@@ -1,4 +1,4 @@
-# Layer CRS Display — 0.5.1
+# Layer CRS Display — 0.5.2
 
 Maintainer: GeoForge Studio | QGIS 3.22–3.x (declared range; native validation pending)
 
@@ -11,15 +11,15 @@ All plugin interface text, tooltips, messages and documentation are in English. 
 
 ## Quick start
 
-1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.5.1.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
+1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.5.2.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
 2. Click **Reproject**. The target CRS initially follows the project CRS and can be changed.
-3. Choose one output folder and a name suffix, such as `_UTM39`. `Roads` becomes `Roads_UTM39`. No numbering or prefix is automatically added.
+3. Choose one output folder, a GeoPackage filename (default `reprojected.gpkg`) and a layer name suffix, such as `_UTM39`. `Roads` becomes `Roads_UTM39`. No numbering or prefix is automatically added.
 4. Eligible layers with a different CRS are initially selected. Use **Use panel selection** to use the Layers panel selection, or change checkboxes individually.
 5. Review the output names and click **Reproject**. Progress and the result for each layer are displayed.
 
 ## Batch window
 
-**Set the destination** groups the target CRS, output folder and suffix, with a live output naming example. **Choose the layers** provides a searchable table, selection controls, output previews and per-layer status.
+**Set the destination** groups the target CRS, output folder, shared GeoPackage filename and layer suffix, with a live output naming example. **Choose the layers** provides a searchable table, selection controls, output previews and per-layer status.
 
 Search filters the visible list without changing selection. The summary explicitly counts selected layers hidden by search. Selection buttons apply to all layers, including hidden search results.
 
@@ -27,10 +27,10 @@ Search filters the visible list without changing selection. The summary explicit
 
 ## Outputs and scope
 
-- Each vector layer is saved to a separate GeoPackage; each raster to a GeoTIFF.
+- All successfully converted vector layers are saved as separate named tables in **one GeoPackage** (`reprojected.gpkg` by default). Each converted raster is saved to a GeoTIFF. Layers already in the target CRS produce no copy and are excluded from the package.
 - Coordinates are reprojected, rather than merely assigning a different CRS label.
 - Source data, coordinates and layer names are retained. Adding outputs, hiding source layers and changing the project CRS are separate options.
-- Existing files are not overwritten. If selected layers have duplicate output names, run one separately with another suffix. The displayed name is exactly the original name plus suffix; invalid filesystem characters are replaced with `_` only in the physical filename.
+- Existing files are not overwritten. If selected layers have duplicate output names, run one separately with another suffix. The displayed name is exactly the original name plus suffix; invalid filesystem characters are replaced with `_` in the physical raster filename or GeoPackage table name. Reserved GeoPackage table prefixes are escaped with `_`. The shared GeoPackage filename can be changed independently of the layer suffix.
 - All features matching the current layer filter are exported. Selecting individual features does not restrict the export. The source filter is recorded in the report. GeoPackage internal feature IDs may be regenerated; use an attribute field for stable business identifiers.
 - Attribute field names and values are transferred by the reprojection algorithm. A reported transformation error or a feature-count mismatch prevents publication of that layer's output. Styles are copied where possible; project forms, relationships and other dependencies are not fully migrated.
 
@@ -40,20 +40,20 @@ Nearest neighbour is the default for categorical values. Choose bilinear or cubi
 
 GDAL calculates output cell size and extent. Input data type and source NoData are inherited through the algorithm. Matching CRS does not guarantee matching resolution, extent or grid alignment. TIFF outputs are tiled and uncompressed, with BigTIFF enabled when needed; output files can be large.
 
-Layers run sequentially as background tasks to limit simultaneous memory and disk use. Raster Warp enables overlapping I/O and processing and uses up to four computation threads. Actual speed depends on data volume, drivers, storage and transformation; no benchmark or time guarantee is claimed.
+Layers run sequentially as background tasks; validated vector outputs are then combined by `native:package` in another background task. Temporary vector data is removed after completion. Processing is sequential to limit simultaneous memory and disk use. Raster Warp enables overlapping I/O and processing and uses up to four computation threads. Actual speed depends on data volume, drivers, storage and transformation; no benchmark or time guarantee is claimed.
 
 ## Requirements and exclusions
 
 - Unknown source CRS: assign the actual source CRS first. The plugin does not guess it.
 - Edit mode: save changes and leave edit mode before reprojection.
-- Layers already in the target CRS are listed but not exported again.
+- Layers already in the target CRS are listed but not exported again. The check uses QGIS equality and GDAL full-CRS equivalence for aliases, retaining coordinate epoch distinctions. Same zone alone does not imply the same CRS.
 - Non-spatial tables, WMS/XYZ services, meshes and point clouds are not supported. Rasters must use the GDAL provider. Readable GeoPackage/FileGDB raster sublayers depend on the GDAL version bundled with QGIS.
 - Processing must be enabled; raster conversion also requires its GDAL provider. No additional pip dependencies are required.
 - Transformations needing datum grids require the appropriate grids and coordinate operation in QGIS. The plugin does not download them or verify that the assigned source CRS is correct.
 
 ## Cancellation and reporting
 
-**Stop** cancels the current operation and remaining queue. Completed outputs are retained; incomplete outputs are not published under final filenames. The dialog cannot close until cancellation completes. Failure of one layer does not stop subsequent layers. A JSON report in the output folder records source and target CRS, names, filters, statuses and errors.
+**Stop** cancels the current operation and remaining queue. Already saved rasters are retained. Converted vectors are staged and saved together only when packaging succeeds; stopping before that point discards the unsaved vector outputs. A failed or cancelled package is never exposed under the final filename. The dialog cannot close until cancellation completes. Failure of one layer does not stop subsequent layers. A JSON report in the output folder records source and target CRS, names, filters, statuses and errors.
 
 ## Development and validation
 
@@ -74,7 +74,7 @@ python tools/build_zip.py
 The portable suite checks output names and collisions. The Qt suite uses real
 widgets and files but simulated QGIS objects, providers and tasks. It checks
 three dialog sizes, selection/search, success/failure, CRS/count validation,
-cancellation and preservation of existing outputs. These tests do **not** prove
+cancellation, shared-package failures, same-CRS exclusion and preservation of existing outputs. These tests do **not** prove
 that QGIS/GDAL performs reprojection correctly.
 
 Run `tests/native_acceptance.py` inside the Python Console of an actual QGIS 3
@@ -86,7 +86,7 @@ claim compatibility with a QGIS version until it has been tested.
 
 ## Publication status
 
-Version 0.5.1 is an **experimental release candidate**, not an approved QGIS plugin.
+Version 0.5.2 is an **experimental release candidate**, not an approved QGIS plugin.
 Source code and support are hosted at
 [geoforge-studio/layer-crs-display](https://github.com/geoforge-studio/layer-crs-display).
 The public contact email is `reynolds.mach88@gmail.com`. Native QGIS acceptance
@@ -119,3 +119,6 @@ sharing a report.
 - https://docs.qgis.org/3.22/en/docs/pyqgis_developer_cookbook/tasks.html
 - https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/vectorgeneral.html#reproject-layer
 - https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/gdal/rasterprojections.html#warp-reproject
+
+- https://docs.qgis.org/3.40/en/docs/user_manual/processing_algs/qgis/database.html#package-layers
+- https://gdal.org/en/stable/api/python/spatial_ref_api.html

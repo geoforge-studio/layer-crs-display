@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Sequential Processing tasks with main-thread completion and staged outputs."""
 import json
+import math
 import os
 import shutil
 import tempfile
@@ -12,6 +13,28 @@ from qgis.core import (QgsApplication, QgsCoordinateReferenceSystem, QgsProcessi
     QgsProcessingContext, QgsProcessingFeedback, QgsFeatureRequest, QgsVectorLayer,
     QgsRasterLayer, QgsMapLayerStyle)
 from .batch_logic import SIDECARS
+
+
+def same_crs(source, target):
+    """Compare complete CRS definitions, including aliases, without losing epochs."""
+    if not source.isValid() or not target.isValid():
+        return False
+    epochs = [getattr(crs, 'coordinateEpoch', lambda: float('nan'))() for crs in (source, target)]
+    if not (all(math.isnan(e) for e in epochs) or epochs[0] == epochs[1]):
+        return False
+    if source == target:
+        return True
+    try:
+        from osgeo import osr
+        a, b = osr.SpatialReference(), osr.SpatialReference()
+        if a.ImportFromWkt(source.toWkt()) or b.ImportFromWkt(target.toWkt()):
+            return False
+        # QGIS layer coordinates use traditional GIS x/y order.
+        a.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        b.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        return bool(a.IsSame(b))
+    except (ImportError, RuntimeError, AttributeError):
+        return False
 
 
 class ConversionFeedback(QgsProcessingFeedback):
@@ -39,7 +62,7 @@ def eligibility(layer, target):
         return 'Only spatial vector layers and GDAL-readable rasters are supported.'
     if not layer.crs().isValid():
         return 'Unknown source CRS. Assign the actual source CRS before reprojection.'
-    if layer.crs() == target:
+    if same_crs(layer.crs(), target):
         return 'Already in the target CRS.'
     if isinstance(layer, QgsVectorLayer) and layer.isEditable():
         return 'Save changes and leave layer edit mode first.'
@@ -60,6 +83,10 @@ class BatchRunner(QObject):
         self.feedback = None
         self.results = []
         self._retired_tasks = []
+        self.stage = None
+        self.pending_vectors = []
+        self.package_stage = None
+        self.package_layers = []
 
     def start(self, plans, target, resampling=0, add_layers=True, hide_sources=False, project_crs=False):
         if self.active:
@@ -69,6 +96,10 @@ class BatchRunner(QObject):
         self.plans = [dict(p) for p in plans]
         if any(p.get('error') for p in plans):
             raise ValueError('Resolve output name errors before starting.')
+        vectors = [p for p in plans if p['kind'] == 'vector']
+        if vectors and (len({p['output_path'] for p in vectors}) != 1 or
+                        any(not p.get('output_layer') for p in vectors)):
+            raise ValueError('Vector outputs must use one GeoPackage with named layers. Refresh the preview.')
         self.target = QgsCoordinateReferenceSystem(target)
         self._retired_tasks.clear()
         self.resampling = resampling
@@ -77,6 +108,11 @@ class BatchRunner(QObject):
         self.active = True
         self.index = 0
         self.results = []
+        self.pending_vectors = []
+        self.package_layers = []
+        self.package_stage = None
+        self.packaging = False
+        self.has_vectors = bool(vectors)
         self.started = datetime.now().astimezone().isoformat()
         QTimer.singleShot(0, self._next)
 
@@ -91,13 +127,23 @@ class BatchRunner(QObject):
         if self.index >= len(self.plans) or self.cancelled:
             for p in self.plans[self.index:]:
                 self._record(p, 'cancelled', 'Not processed: operation cancelled.')
-            self._finish()
+            if self.pending_vectors and not self.cancelled:
+                self._package_vectors()
+            else:
+                for entry in self.pending_vectors:
+                    self._record(entry['plan'], 'cancelled', 'Cancelled before the shared GeoPackage was saved.')
+                self._finish()
             return
         self.current = self.plans[self.index]
         self.stage = None
         layer = self.project.mapLayer(self.current['layer_id'])
         self.current_layer = layer
         try:
+            if layer is not None and layer.isValid() and same_crs(layer.crs(), self.target):
+                self._record(self.current, 'skipped', 'Already in the target CRS; no copy created.')
+                self.index += 1
+                QTimer.singleShot(0, self._next)
+                return
             problem = eligibility(layer, self.target)
             if problem:
                 raise ValueError(problem)
@@ -141,7 +187,10 @@ class BatchRunner(QObject):
             QTimer.singleShot(0, self._next)
 
     def _progress(self, value):
-        self.progressChanged.emit(100 * (self.index + value / 100) / len(self.plans))
+        if self.packaging:
+            self.progressChanged.emit(90 + value / 10)
+        else:
+            self.progressChanged.emit((90 if self.has_vectors else 100) * (self.index + value / 100) / len(self.plans))
 
     def _done(self, successful, results):
         """QgsProcessingAlgRunnerTask emits executed from its main-thread finished()."""
@@ -157,7 +206,7 @@ class BatchRunner(QObject):
         finally:
             self._cleanup()
             self.index += 1
-            self.progressChanged.emit(100 * self.index / len(self.plans))
+            self._progress(0)
             QTimer.singleShot(0, self._next)
 
     def _publish(self):
@@ -173,6 +222,12 @@ class BatchRunner(QObject):
             if expected >= 0 and count != expected:
                 raise ValueError('The output feature count differs from the filtered source layer.')
             self.current['output_features'] = count
+            check = None
+            self.pending_vectors.append(dict(plan=dict(self.current), path=self.staged_file,
+                                             stage=self.stage, style=self.style))
+            self.stage = None  # Keep the converted source until packaging completes.
+            self._record(self.current, 'staged', 'Converted; waiting for the shared GeoPackage.')
+            return
         check = None  # Release file handles before rename on Windows.
         final = Path(self.current['output_path'])
         if any(Path(str(final)+suffix).exists() for suffix in SIDECARS):
@@ -218,8 +273,107 @@ class BatchRunner(QObject):
         self._record(self.current, 'success', 'Saved.' + ('\n' + '\n'.join(warnings) if warnings else ''))
 
     def _record(self, plan, status, message):
-        self.results.append(dict(plan, status=status, message=message))
+        result = dict(plan, status=status, message=message)
+        for index, previous in enumerate(self.results):
+            if previous['layer_id'] == plan['layer_id']:
+                self.results[index] = result
+                break
+        else:
+            self.results.append(result)
         self.rowChanged.emit(plan['layer_id'], status, message)
+
+    def _package_vectors(self):
+        """Package only validated converted layers, in one background task."""
+        try:
+            final = Path(self.pending_vectors[0]['plan']['output_path'])
+            if final.exists() or any(Path(str(final)+s).exists() for s in SIDECARS):
+                raise ValueError('The destination GeoPackage or a sidecar already exists.')
+            self.package_stage = Path(tempfile.mkdtemp(prefix='crs_stage_', dir=str(final.parent)))
+            self.package_file = self.package_stage / final.name
+            for entry in self.pending_vectors:
+                layer = QgsVectorLayer(str(entry['path']), entry['plan']['output_layer'], 'ogr')
+                if not layer.isValid():
+                    raise ValueError('A converted layer could not be reopened for packaging.')
+                self.package_layers.append(layer)
+            algorithm = QgsApplication.processingRegistry().algorithmById('native:package')
+            if algorithm is None:
+                raise ValueError('The Package layers algorithm is unavailable. Enable Processing.')
+            self.context = QgsProcessingContext()
+            self.context.setProject(self.project)
+            self.context.setTransformContext(self.project.transformContext())
+            self.feedback = ConversionFeedback()
+            self.packaging = True
+            self.feedback.progressChanged.connect(self._progress)
+            params = dict(LAYERS=self.package_layers, OUTPUT=str(self.package_file),
+                          OVERWRITE=False, SAVE_STYLES=False, SAVE_METADATA=False,
+                          SELECTED_FEATURES_ONLY=False, EXPORT_RELATED_LAYERS=False)
+            self.task = QgsProcessingAlgRunnerTask(algorithm, params, self.context, self.feedback)
+            self.task.setDependentLayers(self.package_layers)
+            self.task.executed.connect(self._package_done)
+            for entry in self.pending_vectors:
+                self.rowChanged.emit(entry['plan']['layer_id'], 'packaging', 'Saving shared GeoPackage…')
+            QgsApplication.taskManager().addTask(self.task)
+        except Exception as exc:
+            for entry in self.pending_vectors:
+                self._record(entry['plan'], 'failed', str(exc))
+            self._cleanup()
+            self._finish()
+
+    def _package_done(self, successful, results):
+        check = None
+        try:
+            if self.cancelled or self.task.isCanceled():
+                for entry in self.pending_vectors:
+                    self._record(entry['plan'], 'cancelled', 'Cancelled; no partial GeoPackage was published.')
+            elif not successful or self.feedback.errors:
+                raise ValueError('\n'.join(self.feedback.errors) or 'Shared GeoPackage creation failed.')
+            else:
+                final = Path(self.pending_vectors[0]['plan']['output_path'])
+                for entry in self.pending_vectors:
+                    plan = entry['plan']
+                    uri = str(self.package_file) + '|layername=' + plan['output_layer']
+                    check = QgsVectorLayer(uri, plan['output_name'], 'ogr')
+                    if (not check.isValid() or check.crs() != self.target or
+                            check.featureCount() != plan['output_features']):
+                        raise ValueError('Shared GeoPackage validation failed for ' + plan['output_name'])
+                    check = None
+                if any(Path(str(final)+s).exists() for s in SIDECARS):
+                    raise ValueError('A destination sidecar appeared while processing. Nothing was overwritten.')
+                fd = os.open(str(final), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
+                os.close(fd)
+                try:
+                    os.replace(str(self.package_file), str(final))
+                except Exception:
+                    final.unlink()
+                    raise
+                for entry in self.pending_vectors:
+                    plan = entry['plan']
+                    plan['output_uri'] = str(final) + '|layername=' + plan['output_layer']
+                    warning = ''
+                    if self.add_layers:
+                        try:
+                            output = QgsVectorLayer(plan['output_uri'], plan['output_name'], 'ogr')
+                            if not output.isValid():
+                                raise ValueError('Could not load the saved layer.')
+                            entry['style'].writeToLayer(output)
+                            if output.crs() != self.target:
+                                output = QgsVectorLayer(plan['output_uri'], plan['output_name'], 'ogr')
+                            output.setName(plan['output_name'])
+                            self.project.addMapLayer(output)
+                            if self.hide_sources:
+                                node = self.project.layerTreeRoot().findLayer(plan['layer_id'])
+                                if node:
+                                    node.setItemVisibilityChecked(False)
+                        except Exception as exc:
+                            warning = ' Project/style update failed: ' + str(exc)
+                    self._record(plan, 'success', 'Saved to shared GeoPackage.' + warning)
+        except Exception as exc:
+            for entry in self.pending_vectors:
+                self._record(entry['plan'], 'failed', str(exc))
+        finally:
+            check = None  # Release a failed validation handle before cleanup on Windows.
+            self._cleanup()
+            self._finish()
 
     def _cleanup(self):
         if self.task:
@@ -233,6 +387,13 @@ class BatchRunner(QObject):
         self.current_layer = None
 
     def _finish(self):
+        self.package_layers.clear()
+        for entry in self.pending_vectors:
+            shutil.rmtree(str(entry['stage']), ignore_errors=True)
+        self.pending_vectors.clear()
+        if self.package_stage:
+            shutil.rmtree(str(self.package_stage), ignore_errors=True)
+            self.package_stage = None
         if self.set_project_crs and any(r['status'] == 'success' for r in self.results):
             self.project.setCrs(self.target)
         folder = Path(self.plans[0]['output_path']).parent
@@ -247,4 +408,5 @@ class BatchRunner(QObject):
         except Exception as exc:
             report_text = 'Could not save the report: ' + str(exc)
         self.active = False
+        self.progressChanged.emit(100)
         self.finished.emit(self.results, report_text)

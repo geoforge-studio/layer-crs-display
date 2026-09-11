@@ -1,3 +1,14 @@
+# 0.5.2 — shared GeoPackage (experimental)
+
+- Save converted vector layers to separate tables in one configurable GeoPackage.
+- Exclude layers already in the target CRS at selection and execution time; compare equivalent CRS definitions through GDAL when QGIS equality is insufficient.
+- Keep raster outputs as GeoTIFF and leave original inputs untouched.
+- Package only validated converted vectors, with related-layer export disabled.
+- Validate every packaged layer before publication; prevent overwriting existing files.
+- Discard unsaved vector outputs on cancellation; keep already published rasters.
+- Add regression checks for shared outputs, skipped layers, package failures and late collisions.
+- Native QGIS acceptance remains pending.
+
 # 0.5.1 — publication preparation (experimental)
 
 - Use GeoForge Studio as the public maintainer identity.

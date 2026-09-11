@@ -1,23 +1,21 @@
-# Validation of candidate 0.5.1
+# Validation of candidate 0.5.2
 
-- PASS: all 9 portable naming/collision tests.
+- PASS: 13 portable naming/planning tests, including one shared GeoPackage,
+  distinct table names, custom filenames, reserved names and collision handling.
 - PASS: real PyQt5 widgets at 360x240, 640x360 and 1024x600.
-- PASS with simulated GIS boundaries: batch success, continued processing after a
-  failure, output CRS/count checks, reported transformation errors, cancellation,
-  collision protection, source preservation and raster task parameters.
-- PASS: old CRS widget IDs are replaced without duplicating the new widget ID;
-  unrelated widget IDs are preserved.
-- PASS: Python syntax compilation.
-- PASS: repeat builds produce identical ZIP bytes; runtime files in ZIP match source.
-- PASS: one top-level installation directory, required icon and documentation,
-  no bytecode/caches/binaries, and no previous personal identifiers in text source.
-- PASS: the reprojection engine AST is unchanged from the supplied 0.5.0 version.
-- PASS: the release builder accepts complete metadata; the earlier empty-email
-  draft was correctly blocked.
-- NOT RUN: native QGIS/GDAL, real coordinate transformation, actual QGIS plugin
-  load/unload, native Windows/macOS behavior, QGIS repository security scan.
-- The public repository and Issues endpoint were verified before source upload;
-  native QGIS approval remains a separate step.
+- PASS with simulated GIS boundaries: two converted vectors share one file with
+  distinct layer URIs; explicitly queued same-CRS layers are skipped; an all-same
+  batch creates no GeoPackage; unequal coordinate epochs are not treated as equal.
+- PASS with simulated GIS boundaries: reprojection failure continuation, CRS/count
+  validation, packaging failure, incomplete packaging, cancellation during
+  conversion/staging/packaging, late destination collision and source preservation.
+- PASS with simulated GIS boundaries: raster task parameters and GeoTIFF output.
+- PASS: widget migration preserves unrelated embedded widgets.
+- NOT RUN: native QGIS/GDAL package writing and real CRS alias equivalence,
+  coordinate transformation, actual plugin load/unload, Windows/macOS behavior,
+  and the QGIS repository security scan.
 
-The checks above support local testing of this candidate. They do not constitute
-QGIS approval or a guarantee of compatibility with the declared version range.
+The native acceptance script now checks real reprojection of two vectors into
+one GeoPackage, exact table membership, same-CRS exclusion, CRS aliases, raster
+values/NoData and unchanged inputs. Run it inside QGIS before claiming native
+compatibility. These automated checks do not constitute QGIS approval.
