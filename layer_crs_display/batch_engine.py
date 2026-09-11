@@ -1,0 +1,250 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+"""Sequential Processing tasks with main-thread completion and staged outputs."""
+import json
+import os
+import shutil
+import tempfile
+from datetime import datetime
+from pathlib import Path
+
+from qgis.PyQt.QtCore import QObject, pyqtSignal, QTimer
+from qgis.core import (QgsApplication, QgsCoordinateReferenceSystem, QgsProcessingAlgRunnerTask,
+    QgsProcessingContext, QgsProcessingFeedback, QgsFeatureRequest, QgsVectorLayer,
+    QgsRasterLayer, QgsMapLayerStyle)
+from .batch_logic import SIDECARS
+
+
+class ConversionFeedback(QgsProcessingFeedback):
+    def __init__(self):
+        super().__init__()
+        self.errors = []
+
+    def reportError(self, error, fatalError=False):
+        self.errors.append(str(error))
+        super().reportError(error, fatalError)
+
+
+def layer_kind(layer):
+    if isinstance(layer, QgsVectorLayer):
+        return 'vector' if layer.isSpatial() else ''
+    if isinstance(layer, QgsRasterLayer) and layer.providerType() == 'gdal':
+        return 'raster'
+    return ''
+
+
+def eligibility(layer, target):
+    if layer is None or not layer.isValid():
+        return 'The layer is invalid or has been removed.'
+    if not layer_kind(layer):
+        return 'Only spatial vector layers and GDAL-readable rasters are supported.'
+    if not layer.crs().isValid():
+        return 'Unknown source CRS. Assign the actual source CRS before reprojection.'
+    if layer.crs() == target:
+        return 'Already in the target CRS.'
+    if isinstance(layer, QgsVectorLayer) and layer.isEditable():
+        return 'Save changes and leave layer edit mode first.'
+    return ''
+
+
+class BatchRunner(QObject):
+    rowChanged = pyqtSignal(str, str, str)
+    progressChanged = pyqtSignal(float)
+    finished = pyqtSignal(object, str)
+
+    def __init__(self, project, parent=None):
+        super().__init__(parent)
+        self.project = project
+        self.active = False
+        self.task = None
+        self.context = None
+        self.feedback = None
+        self.results = []
+        self._retired_tasks = []
+
+    def start(self, plans, target, resampling=0, add_layers=True, hide_sources=False, project_crs=False):
+        if self.active:
+            raise ValueError('The previous reprojection is still running.')
+        if not target.isValid() or not plans:
+            raise ValueError('A valid target CRS and at least one layer are required.')
+        self.plans = [dict(p) for p in plans]
+        if any(p.get('error') for p in plans):
+            raise ValueError('Resolve output name errors before starting.')
+        self.target = QgsCoordinateReferenceSystem(target)
+        self._retired_tasks.clear()
+        self.resampling = resampling
+        self.add_layers, self.hide_sources, self.set_project_crs = add_layers, hide_sources, project_crs
+        self.cancelled = False
+        self.active = True
+        self.index = 0
+        self.results = []
+        self.started = datetime.now().astimezone().isoformat()
+        QTimer.singleShot(0, self._next)
+
+    def cancel(self):
+        self.cancelled = True
+        if self.feedback:
+            self.feedback.cancel()
+        if self.task:
+            self.task.cancel()
+
+    def _next(self):
+        if self.index >= len(self.plans) or self.cancelled:
+            for p in self.plans[self.index:]:
+                self._record(p, 'cancelled', 'Not processed: operation cancelled.')
+            self._finish()
+            return
+        self.current = self.plans[self.index]
+        self.stage = None
+        layer = self.project.mapLayer(self.current['layer_id'])
+        self.current_layer = layer
+        try:
+            problem = eligibility(layer, self.target)
+            if problem:
+                raise ValueError(problem)
+            if layer.crs().toWkt() != self.current['source_wkt']:
+                raise ValueError('The source CRS changed after selection. Refresh the layer list.')
+            if layer.name() != self.current['name']:
+                raise ValueError('The layer name changed after selection. Refresh the layer list.')
+            path = Path(self.current['output_path'])
+            if path.exists():
+                raise ValueError('The output file already exists. Existing files will not be overwritten.')
+            self.stage = Path(tempfile.mkdtemp(prefix='crs_stage_', dir=str(path.parent)))
+            self.staged_file = self.stage / path.name
+            self.style = QgsMapLayerStyle()
+            self.style.readFromLayer(layer)
+            self.context = QgsProcessingContext()
+            self.context.setProject(self.project)
+            self.context.setTransformContext(self.project.transformContext())
+            self.context.setInvalidGeometryCheck(QgsFeatureRequest.GeometryAbortOnInvalid)
+            self.feedback = ConversionFeedback()
+            self.feedback.progressChanged.connect(self._progress)
+            self.current['subset_filter'] = layer.subsetString() if isinstance(layer, QgsVectorLayer) else ''
+            self.current['source_crs'] = layer.crs().authid() or layer.crs().description()
+            algorithm_id = 'native:reprojectlayer' if self.current['kind'] == 'vector' else 'gdal:warpreproject'
+            algorithm = QgsApplication.processingRegistry().algorithmById(algorithm_id)
+            if algorithm is None:
+                raise ValueError('Algorithm {} is unavailable. Enable Processing and the GDAL provider.'.format(algorithm_id))
+            params = dict(INPUT=layer, TARGET_CRS=self.target, OUTPUT=str(self.staged_file))
+            if self.current['kind'] == 'raster':
+                params.update(SOURCE_CRS=layer.crs(), RESAMPLING=self.resampling, DATA_TYPE=0,
+                    MULTITHREADING=True, OPTIONS='TILED=YES|BIGTIFF=IF_SAFER',
+                    EXTRA='-wo NUM_THREADS={}'.format(min(4, max(1, os.cpu_count() or 1))))
+            self.task = QgsProcessingAlgRunnerTask(algorithm, params, self.context, self.feedback)
+            self.task.setDependentLayers([layer])
+            self.task.executed.connect(self._done)
+            self.rowChanged.emit(self.current['layer_id'], 'running', 'Reprojecting…')
+            QgsApplication.taskManager().addTask(self.task)
+        except Exception as exc:
+            self._record(self.current, 'failed', str(exc))
+            self._cleanup()
+            self.index += 1
+            QTimer.singleShot(0, self._next)
+
+    def _progress(self, value):
+        self.progressChanged.emit(100 * (self.index + value / 100) / len(self.plans))
+
+    def _done(self, successful, results):
+        """QgsProcessingAlgRunnerTask emits executed from its main-thread finished()."""
+        try:
+            if self.cancelled or self.task.isCanceled():
+                self._record(self.current, 'cancelled', 'Cancelled. No incomplete output was published.')
+            elif not successful or self.feedback.errors:
+                raise ValueError('\n'.join(self.feedback.errors) or self.feedback.textLog() or 'The reprojection algorithm failed.')
+            else:
+                self._publish()
+        except Exception as exc:
+            self._record(self.current, 'failed', str(exc))
+        finally:
+            self._cleanup()
+            self.index += 1
+            self.progressChanged.emit(100 * self.index / len(self.plans))
+            QTimer.singleShot(0, self._next)
+
+    def _publish(self):
+        kind, name = self.current['kind'], self.current['output_name']
+        load = lambda path: QgsVectorLayer(str(path), name, 'ogr') if kind == 'vector' else QgsRasterLayer(str(path), name, 'gdal')
+        check = load(self.staged_file)
+        if not check.isValid() or check.crs() != self.target:
+            raise ValueError('No valid output in the target CRS was produced.')
+        if kind == 'vector':
+            count = check.featureCount()
+            # A count is queried only after conversion, when providers usually cache it.
+            expected = self.current_layer.featureCount()
+            if expected >= 0 and count != expected:
+                raise ValueError('The output feature count differs from the filtered source layer.')
+            self.current['output_features'] = count
+        check = None  # Release file handles before rename on Windows.
+        final = Path(self.current['output_path'])
+        if any(Path(str(final)+suffix).exists() for suffix in SIDECARS):
+            raise ValueError('A sidecar file already exists in the destination. Output publication was stopped.')
+        # Reserve the final pathname with O_EXCL: never overwrite an existing file.
+        fd = os.open(str(final), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
+        os.close(fd)
+        try:
+            os.replace(str(self.staged_file), str(final))
+        except Exception:
+            final.unlink()
+            raise
+        # Common raster sidecars, if the provider created them.
+        warnings = []
+        for suffix in ('.aux.xml', '.ovr', '.msk'):
+            source = Path(str(self.staged_file) + suffix)
+            if source.exists():
+                destination = Path(str(final) + suffix)
+                try:
+                    with destination.open('xb') as stream, source.open('rb') as original:
+                        shutil.copyfileobj(original, stream)
+                except Exception as exc:
+                    warnings.append('Could not transfer a sidecar file: ' + str(exc))
+        if self.add_layers:
+            output = load(final)
+            if not output.isValid():
+                warnings.append('The file was saved but could not be added to the project.')
+            else:
+                try:
+                    self.style.writeToLayer(output)
+                except Exception:
+                    warnings.append('The layer style could not be transferred.')
+                # Style XML must never reassign the output CRS.
+                if output.crs() != self.target:
+                    warnings.append('The style was not applied because it was incompatible with the target CRS.')
+                    output = load(final)
+                output.setName(name)
+                self.project.addMapLayer(output)
+                if self.hide_sources:
+                    node = self.project.layerTreeRoot().findLayer(self.current['layer_id'])
+                    if node:
+                        node.setItemVisibilityChecked(False)
+        self._record(self.current, 'success', 'Saved.' + ('\n' + '\n'.join(warnings) if warnings else ''))
+
+    def _record(self, plan, status, message):
+        self.results.append(dict(plan, status=status, message=message))
+        self.rowChanged.emit(plan['layer_id'], status, message)
+
+    def _cleanup(self):
+        if self.task:
+            # Keep context/feedback alive through the task's finished callback.
+            self._retired_tasks.append((self.task, self.context, self.feedback))
+        if self.stage:
+            shutil.rmtree(str(self.stage), ignore_errors=True)
+        self.task = None
+        self.feedback = None
+        self.context = None
+        self.current_layer = None
+
+    def _finish(self):
+        if self.set_project_crs and any(r['status'] == 'success' for r in self.results):
+            self.project.setCrs(self.target)
+        folder = Path(self.plans[0]['output_path']).parent
+        report = folder / ('crs_batch_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f') + '.json')
+        payload = dict(started=self.started, finished=datetime.now().astimezone().isoformat(),
+            target_crs=self.target.authid(), target_wkt=self.target.toWkt(), resampling=self.resampling,
+            cancelled=self.cancelled, results=self.results)
+        try:
+            with report.open('x', encoding='utf-8') as stream:
+                json.dump(payload, stream, ensure_ascii=False, indent=2)
+            report_text = str(report)
+        except Exception as exc:
+            report_text = 'Could not save the report: ' + str(exc)
+        self.active = False
+        self.finished.emit(self.results, report_text)
