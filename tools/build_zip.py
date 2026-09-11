@@ -36,8 +36,8 @@ def build(release=False):
                 for name in ('README.md', 'LICENSE', 'CHANGELOG.md')]
     sources += [(f, 'layer_crs_display/docs/' + f.name)
                 for f in sorted((ROOT / 'docs').glob('*.md'))]
-    sources.append((ROOT / 'tests/native_acceptance.py',
-                    'layer_crs_display/tests/native_acceptance.py'))
+    # Development tests stay in the source repository, outside the installation
+    # payload. The plugin never imports them; docs/TESTING.md explains their use.
     names = {name for _, name in sources}
     if 'layer_crs_display/' + info['icon'] not in names:
         raise ValueError('The icon is missing from the package.')

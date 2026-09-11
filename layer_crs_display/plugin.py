@@ -16,7 +16,7 @@ from .settings_dialog import SettingsDialog
 
 
 PLUGIN_NAME = "Layer CRS Display"
-PLUGIN_VERSION = "0.5.2"
+PLUGIN_VERSION = "0.5.3"
 SETTINGS_GROUP = "GeoForge/LayerCrsDisplay"
 
 

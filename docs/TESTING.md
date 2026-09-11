@@ -23,12 +23,15 @@ These tests use simulated GIS objects; they are not native reprojection tests.
 3. Confirm the **CRS** toolbar has **Display CRS** and **Reproject** buttons.
    Toggle the display, change settings, unload/reload, and open an older project
    to check that it has one CRS widget per layer and unrelated widgets are kept.
-4. Open the QGIS Python Console and run the following using the installed plugin:
+4. Download the source repository for the installed version and extract it.
+   Development tests are kept in the repository and are not installed with the
+   plugin. Open the QGIS Python Console and run the following, replacing the
+   example path with the extracted repository directory:
 
 ```python
 from pathlib import Path
-import layer_crs_display
-script = Path(layer_crs_display.__file__).parent / 'tests' / 'native_acceptance.py'
+repository = Path(r'C:/path/to/layer-crs-display')
+script = repository / 'tests' / 'native_acceptance.py'
 exec(compile(script.read_text(encoding='utf-8'), str(script), 'exec'))
 ```
 
@@ -45,7 +48,13 @@ time; the test waits for the task to finish before freeing its context.
    untested platforms or versions as passed. Add authentic screenshots only after
    the interface has been exercised in native QGIS.
 
+## Installation archive security scan
+
+Scan the **extracted installation ZIP** with Bandit before submission. Use its
+default rules without suppressions. Development tests remain available under
+`tests/` in the public repository; no test code is imported by the plugin.
+
 ## Current status
 
-Native QGIS/GDAL testing is pending. The declared 3.22–3.x metadata range is
+The maintainer reported a successful basic QGIS check of 0.5.2. The complete native acceptance suite and an exact QGIS/OS version record are still pending. The declared 3.22–3.x metadata range is
 inherited from the supplied version and is not a tested-platform matrix.

@@ -1,3 +1,12 @@
+# 0.5.3 — installation packaging fix (experimental)
+
+- Keep the native acceptance script in the source repository, outside the installed plugin.
+- Remove development-only test code from the installation ZIP. The QGIS scan of
+  0.5.2 reported 26 Bandit B101 findings in this test script.
+- Update the instructions for running native tests from a repository checkout.
+- Runtime behavior is unchanged from 0.5.2, apart from the reported version.
+- Continue targeting QGIS 3; this release does not claim Qt6/QGIS 4 support.
+
 # 0.5.2 — shared GeoPackage (experimental)
 
 - Save converted vector layers to separate tables in one configurable GeoPackage.

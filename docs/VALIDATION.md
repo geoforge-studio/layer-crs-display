@@ -1,3 +1,21 @@
+# Validation of candidate 0.5.3
+
+- Reproduced the uploaded 0.5.2 scan locally with Bandit 1.9.4: 9 Python
+  files, 26 B101 findings, all in tests/native_acceptance.py.
+- Scanned the extracted 0.5.3 installation ZIP with default Bandit rules and
+  no suppressions: 8 Python files, 0 findings, 0 scan errors.
+- Runtime Python files match 0.5.2 byte-for-byte except PLUGIN_VERSION.
+- Development tests remain in the public repository; the installed plugin
+  does not import or require them. Installation instructions now point to
+  the repository copy of the native acceptance script.
+- The maintainer reported a successful basic QGIS check of 0.5.2; exact
+  QGIS/OS versions and the full native acceptance suite remain unrecorded.
+- This is a QGIS 3 release. Qt6/QGIS 4 compatibility has not been implemented.
+- The QGIS portal must scan and review the new version after upload; a local
+  Bandit pass does not guarantee portal approval or cover its other checks.
+
+## Previous functional checks
+
 # Validation of candidate 0.5.2
 
 - PASS: 13 portable naming/planning tests, including one shared GeoPackage,
