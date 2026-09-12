@@ -9,14 +9,15 @@ from qgis.core import Qgis, QgsLayerTreeModel, QgsProject, QgsSettings
 from qgis.gui import QgsGui
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QDialog, QMessageBox
+from qgis.PyQt.QtWidgets import QAction, QDialog
 
+from .about_dialog import AboutDialog
 from .crs_widget import PROVIDER_ID, CrsDisplayWidgetProvider
 from .settings_dialog import SettingsDialog
 
 
 PLUGIN_NAME = "Layer CRS Display"
-PLUGIN_VERSION = "0.5.4"
+PLUGIN_VERSION = "0.6.0"
 SETTINGS_GROUP = "GeoForge/LayerCrsDisplay"
 
 
@@ -145,16 +146,8 @@ class LayerCrsDisplayPlugin:
             self._refresh_all_widgets()
 
     def show_about(self):
-        QMessageBox.information(
-            self.iface.mainWindow(),
-            "About Layer CRS Display",
-            "Version: {}\nAuthor: GeoForge Studio\n\n"
-            "Displays each layer's coordinate reference system in the Layers "
-            "panel. Batch reprojection exports selected vectors to GeoPackage "
-            "and GDAL rasters to GeoTIFF with a common suffix; original data is retained.".format(
-                PLUGIN_VERSION
-            ),
-        )
+        dialog = AboutDialog(PLUGIN_VERSION, self.iface.mainWindow())
+        dialog.exec_()
 
     def _on_toggle(self, checked):
         settings = self.read_settings()

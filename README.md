@@ -1,4 +1,4 @@
-# Layer CRS Display — 0.5.4
+# Layer CRS Display — 0.6.0
 
 Maintainer: GeoForge Studio | QGIS 3.22–3.x (declared range; native validation pending)
 
@@ -11,7 +11,7 @@ All plugin interface text, tooltips, messages and documentation are in English. 
 
 ## Quick start
 
-1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.5.4.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
+1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.6.0.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
 2. Click **Reproject**. The target CRS initially follows the project CRS and can be changed.
 3. Choose one output folder, a GeoPackage filename (default `reprojected.gpkg`) and a layer name suffix, such as `_UTM39`. `Roads` becomes `Roads_UTM39`. No numbering or prefix is automatically added.
 4. Eligible layers with a different CRS are initially selected. Use **Use panel selection** to use the Layers panel selection, or change checkboxes individually.
@@ -86,7 +86,8 @@ claim compatibility with a QGIS version until it has been tested.
 
 ## Publication status
 
-Version 0.5.4 is an **experimental release candidate**, not an approved QGIS plugin.
+Version 0.5.4 is available through the official QGIS Plugins Repository as an
+experimental release. Version 0.6.0 is an experimental update candidate.
 Source code and support are hosted at
 [geoforge-studio/layer-crs-display](https://github.com/geoforge-studio/layer-crs-display).
 The public contact email is `reynolds.mach88@gmail.com`. Native QGIS acceptance
@@ -113,6 +114,13 @@ versions, layer/provider type, source and target CRS, the error message and a
 minimal non-sensitive example. Do not post private datasets. JSON batch reports
 contain layer names, file paths and subset filters; redact sensitive content before
 sharing a report.
+
+## GeoForge Studio
+
+- [LinkedIn](https://www.linkedin.com/in/geoforge-studio-668319436)
+- [Instagram](https://www.instagram.com/geoforge_studio)
+- [Telegram](https://t.me/GeoforgeStudio)
+- [QGIS plugin page](https://plugins.qgis.org/plugins/layer_crs_display/)
 
 ## Implementation references
 

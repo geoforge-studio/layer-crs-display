@@ -1,3 +1,19 @@
+# Validation of candidate 0.6.0
+
+- PASS: 13 portable naming and output-planning tests.
+- PASS: real PyQt5 interface checks at three batch-dialog sizes, plus the new
+  About dialog. Each project, social and email destination was exercised with
+  an injected URL opener; the test made no network request or browser launch.
+- PASS: Python syntax and release-package structure checks. The installation ZIP
+  contains one top-level plugin directory and excludes development tests.
+- PASS: extracted installation ZIP, Bandit 1.9.4 default rules: zero findings,
+  zero scan errors and no rule suppressions.
+- PASS: Flake8 7.3.0 on the new About module and E731 across runtime code.
+- Reprojection code and declared QGIS 3 compatibility are unchanged.
+- No new native QGIS/GDAL test is claimed for this interface-only update.
+
+## Previous checks
+
 # Validation of candidate 0.5.4
 
 - PASS: extracted installation ZIP, Flake8 7.3.0 E731 check: zero findings.
@@ -8,8 +24,6 @@
 - No new native QGIS test run was performed for this small refactor.
 - The portal's 48 Qt6 migration findings remain outside this QGIS 3 release.
   Do not treat a clean security scan as proof of QGIS 4 compatibility.
-
-## Previous checks
 
 # Validation of candidate 0.5.3
 

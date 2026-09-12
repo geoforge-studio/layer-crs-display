@@ -141,7 +141,27 @@ gui.QgsProjectionSelectionWidget=ProjectionWidget
 from layer_crs_display.batch_engine import BatchRunner, eligibility, same_crs
 from layer_crs_display.batch_dialog import BatchDialog
 from layer_crs_display.batch_logic import plan_outputs
+from layer_crs_display.about_dialog import AboutDialog, PLUGIN_LINKS, SOCIAL_LINKS
 app=QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+opened_urls = []
+about = AboutDialog(
+    '0.6.0',
+    url_opener=lambda url: opened_urls.append(url.toString()),
+)
+about.show()
+app.processEvents()
+for _caption, expected_url, object_name in PLUGIN_LINKS + SOCIAL_LINKS:
+    button = about.findChild(QtWidgets.QPushButton, object_name)
+    assert button is not None
+    button.click()
+    assert opened_urls[-1] == expected_url
+email_button = about.findChild(QtWidgets.QPushButton, 'emailLink')
+assert email_button is not None
+email_button.click()
+assert opened_urls[-1] == 'mailto:reynolds.mach88@gmail.com'
+assert about.findChild(QtWidgets.QLabel, 'aboutVersion').text() == 'Version 0.6.0  |  QGIS 3'
+about.close()
 
 assert same_crs(CRS('EPSG:32639'), CRS('EPSG:32639'))
 assert not same_crs(CRS('EPSG:32639'), CRS('EPSG:32739'))

@@ -1,3 +1,11 @@
+# 0.6.0 — GeoForge links (experimental)
+
+- Replace the plain About message with a dedicated plugin information dialog.
+- Add direct links to the official QGIS plugin page, source repository, issue
+  tracker and GeoForge Studio email.
+- Add the supplied GeoForge Studio LinkedIn, Instagram and Telegram pages.
+- Keep reprojection behavior and the declared QGIS 3 compatibility range unchanged.
+
 # 0.5.4 — code quality fix (experimental)
 
 - Replace the assigned layer-loading lambda with a named function (Flake8 E731).
