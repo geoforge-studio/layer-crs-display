@@ -7,7 +7,7 @@ from pathlib import Path
 
 from qgis.core import Qgis, QgsLayerTreeModel, QgsProject, QgsSettings
 from qgis.gui import QgsGui
-from qgis.PyQt.QtCore import QSize, Qt
+from qgis.PyQt.QtCore import QSize, Qt, QTimer
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QDialog
 
@@ -17,7 +17,7 @@ from .settings_dialog import SettingsDialog
 
 
 PLUGIN_NAME = "Layer CRS Display"
-PLUGIN_VERSION = "0.6.0"
+PLUGIN_VERSION = "0.6.1"
 SETTINGS_GROUP = "GeoForge/LayerCrsDisplay"
 
 
@@ -88,7 +88,7 @@ class LayerCrsDisplayPlugin:
         self.about_action.triggered.connect(self.show_about)
 
         self.batch_action = QAction(
-            QIcon(str(Path(__file__).with_name("convert.svg"))),
+            QIcon(str(Path(__file__).with_name("reproject_061.svg"))),
             "Reproject",
             self.iface.mainWindow(),
         )
@@ -105,8 +105,7 @@ class LayerCrsDisplayPlugin:
         self.toolbar.setIconSize(QSize(28, 28))
         self.toolbar.setStyleSheet(
             """
-            QToolButton#GeoForgeDisplayCrsButton,
-            QToolButton#GeoForgeReprojectButton {
+            QToolButton {
                 background: palette(button);
                 border: 1px solid palette(mid);
                 border-radius: 5px;
@@ -115,17 +114,16 @@ class LayerCrsDisplayPlugin:
                 min-width: 28px;
                 min-height: 28px;
             }
-            QToolButton#GeoForgeDisplayCrsButton:hover,
-            QToolButton#GeoForgeReprojectButton:hover {
+            QToolButton:hover {
                 background: palette(light);
                 border-color: #7195b7;
             }
-            QToolButton#GeoForgeDisplayCrsButton:checked {
+            QToolButton:checked {
                 background: rgba(24, 119, 90, 45);
                 border: 2px solid #18775a;
                 padding: 2px;
             }
-            QToolButton#GeoForgeReprojectButton:pressed {
+            QToolButton:pressed {
                 background: rgba(36, 91, 136, 45);
                 border-color: #245b88;
             }
@@ -133,29 +131,58 @@ class LayerCrsDisplayPlugin:
         )
         self.toolbar.addAction(self.toggle_action)
         self.toolbar.addAction(self.batch_action)
-        self._name_toolbar_button(
+        self._configure_toolbar_button(
             self.toggle_action, "GeoForgeDisplayCrsButton"
         )
-        self._name_toolbar_button(
+        self._configure_toolbar_button(
             self.batch_action, "GeoForgeReprojectButton"
         )
+        self.toolbar.toolButtonStyleChanged.connect(
+            self._keep_toolbar_icon_only
+        )
+        QTimer.singleShot(0, self._enforce_toolbar_button_style)
         self.iface.addPluginToMenu(PLUGIN_NAME, self.toggle_action)
         self.iface.addPluginToMenu(PLUGIN_NAME, self.batch_action)
         self.iface.addPluginToMenu(PLUGIN_NAME, self.settings_action)
         self.iface.addPluginToMenu(PLUGIN_NAME, self.about_action)
 
     def _display_icon(self, checked):
-        filename = "display.svg" if checked else "display_off.svg"
+        filename = (
+            "display_crs_on_061.svg"
+            if checked
+            else "display_crs_off_061.svg"
+        )
         return QIcon(str(Path(__file__).with_name(filename)))
 
     def _update_display_icon(self, checked):
         if self.toggle_action is not None:
             self.toggle_action.setIcon(self._display_icon(checked))
 
-    def _name_toolbar_button(self, action, object_name):
+    def _configure_toolbar_button(self, action, object_name):
         button = self.toolbar.widgetForAction(action)
         if button is not None:
             button.setObjectName(object_name)
+            button.setToolButtonStyle(Qt.ToolButtonIconOnly)
+            button.setIconSize(QSize(28, 28))
+            button.setAccessibleName(action.text())
+            button.style().unpolish(button)
+            button.style().polish(button)
+            button.update()
+
+    def _enforce_toolbar_button_style(self):
+        if self.toolbar is None:
+            return
+        self.toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self._configure_toolbar_button(
+            self.toggle_action, "GeoForgeDisplayCrsButton"
+        )
+        self._configure_toolbar_button(
+            self.batch_action, "GeoForgeReprojectButton"
+        )
+
+    def _keep_toolbar_icon_only(self, style):
+        if style != Qt.ToolButtonIconOnly:
+            QTimer.singleShot(0, self._enforce_toolbar_button_style)
 
     def _remove_actions(self):
         for action in (

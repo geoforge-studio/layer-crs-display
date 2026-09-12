@@ -80,7 +80,7 @@ class AboutDialog(QDialog):
         self.setObjectName("LayerCrsAboutDialog")
         self.setWindowTitle("About Layer CRS Display")
         self.setWindowIcon(
-            QIcon(str(Path(__file__).with_name("icon.svg")))
+            QIcon(str(Path(__file__).with_name("plugin_061.svg")))
         )
         self.setLayoutDirection(Qt.LeftToRight)
         self.setMinimumWidth(560)
@@ -127,7 +127,9 @@ class AboutDialog(QDialog):
         header.setSpacing(12)
         icon = QLabel()
         icon.setPixmap(
-            QIcon(str(Path(__file__).with_name("icon.svg"))).pixmap(52, 52)
+            QIcon(str(Path(__file__).with_name("plugin_061.svg"))).pixmap(
+                52, 52
+            )
         )
         header.addWidget(icon, 0, Qt.AlignTop)
 

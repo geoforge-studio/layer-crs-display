@@ -1,3 +1,12 @@
+# 0.6.1 — toolbar refresh fix (experimental)
+
+- Use uniquely named plugin and toolbar SVG files so Qt cannot reuse cached
+  artwork from an earlier installed version.
+- Enforce icon-only mode directly on both toolbar buttons and restore it if a
+  global QGIS toolbar preference attempts to show text beside the icons.
+- Apply the permanent rounded box to every button in the dedicated CRS toolbar.
+- Keep the 0.6.0 interface, links and reprojection behavior unchanged.
+
 # 0.6.0 — GeoForge links (experimental)
 
 - Replace the plain About message with a dedicated plugin information dialog.

@@ -1,3 +1,20 @@
+# Validation of candidate 0.6.1
+
+- PASS: 13 portable tests and real PyQt5 interface checks at three dialog sizes.
+- PASS: the toolbar starts in icon-only mode and restores icon-only mode after
+  a simulated global change to Text Beside Icon. Both actual tool buttons retain
+  their 28 px icons, stable object names and permanent boxed styling.
+- PASS: the plugin icon and three toolbar states use uniquely named 0.6.1 SVG
+  assets, avoiding reuse of the earlier Qt icon-cache keys.
+- PASS: all eleven bundled SVG assets parse as valid XML.
+- PASS: Python syntax, Flake8 7.3.0 on the changed plugin/About modules and E731
+  across all runtime code.
+- Reprojection code and the declared QGIS 3 compatibility range are unchanged.
+- A full QGIS restart remains part of the installation check because Python
+  plugin modules already loaded by the application cannot be replaced in place.
+
+## Previous checks
+
 # Validation of candidate 0.6.0
 
 - PASS: 13 portable naming and output-planning tests.
@@ -17,8 +34,6 @@
   runtime code.
 - Reprojection code and declared QGIS 3 compatibility are unchanged.
 - No new native QGIS/GDAL test is claimed for this interface-only update.
-
-## Previous checks
 
 # Validation of candidate 0.5.4
 

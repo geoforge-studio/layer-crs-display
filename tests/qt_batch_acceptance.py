@@ -146,7 +146,7 @@ app=QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 opened_urls = []
 about = AboutDialog(
-    '0.6.0',
+    '0.6.1',
     url_opener=lambda url: opened_urls.append(url.toString()),
 )
 about.show()
@@ -165,7 +165,7 @@ email_button = about.findChild(QtWidgets.QPushButton, 'emailLink')
 assert email_button is not None
 email_button.click()
 assert opened_urls[-1] == 'mailto:reynolds.mach88@gmail.com'
-assert about.findChild(QtWidgets.QLabel, 'aboutVersion').text() == 'Version 0.6.0  |  QGIS 3'
+assert about.findChild(QtWidgets.QLabel, 'aboutVersion').text() == 'Version 0.6.1  |  QGIS 3'
 about.close()
 
 assert same_crs(CRS('EPSG:32639'), CRS('EPSG:32639'))
@@ -231,6 +231,13 @@ reproject_button = toolbar_controller.toolbar.widgetForAction(
 assert display_button.objectName() == 'GeoForgeDisplayCrsButton'
 assert reproject_button.objectName() == 'GeoForgeReprojectButton'
 assert 'border: 1px solid palette(mid)' in toolbar_controller.toolbar.styleSheet()
+assert display_button.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
+assert reproject_button.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
+toolbar_controller.toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+app.processEvents()
+assert toolbar_controller.toolbar.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
+assert display_button.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
+assert reproject_button.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
 off_icon_key = toolbar_controller.toggle_action.icon().cacheKey()
 toolbar_controller._update_display_icon(True)
 assert toolbar_controller.toggle_action.icon().cacheKey() != off_icon_key

@@ -46,7 +46,9 @@ class BatchDialog(QDialog):
         self.refreshing = False
         self.manual_selection = False
         self.setObjectName('BatchReprojection')
-        self.setWindowIcon(QIcon(str(Path(__file__).with_name('convert.svg'))))
+        self.setWindowIcon(
+            QIcon(str(Path(__file__).with_name('reproject_061.svg')))
+        )
         self.setStyleSheet("""
             QDialog#BatchReprojection { background: #f3f6fa; color: #233348; }
             QDialog#BatchReprojection QWidget { color: #233348; }
@@ -92,7 +94,11 @@ class BatchDialog(QDialog):
 
         heading = QHBoxLayout()
         icon = QLabel()
-        icon.setPixmap(QIcon(str(Path(__file__).with_name('convert.svg'))).pixmap(36, 36))
+        icon.setPixmap(
+            QIcon(str(Path(__file__).with_name('reproject_061.svg'))).pixmap(
+                36, 36
+            )
+        )
         heading.addWidget(icon)
         title = QVBoxLayout()
         title_text = label('Batch reprojection')
