@@ -5,7 +5,7 @@
 from functools import partial
 from pathlib import Path
 
-from qgis.PyQt.QtCore import Qt, QUrl
+from qgis.PyQt.QtCore import QSize, Qt, QUrl
 from qgis.PyQt.QtGui import QDesktopServices, QIcon
 from qgis.PyQt.QtWidgets import (
     QDialog,
@@ -42,16 +42,19 @@ SOCIAL_LINKS = (
         "LinkedIn",
         "https://www.linkedin.com/in/geoforge-studio-668319436",
         "linkedinLink",
+        "linkedin.svg",
     ),
     (
         "Instagram",
         "https://www.instagram.com/geoforge_studio",
         "instagramLink",
+        "instagram.svg",
     ),
     (
         "Telegram",
         "https://t.me/GeoforgeStudio",
         "telegramLink",
+        "telegram.svg",
     ),
 )
 
@@ -168,13 +171,17 @@ class AboutDialog(QDialog):
         social_grid.setContentsMargins(0, 0, 0, 0)
         social_grid.setHorizontalSpacing(8)
         social_destinations = SOCIAL_LINKS + (
-            ("Email", EMAIL_URL, "emailLink"),
+            ("Email", EMAIL_URL, "emailLink", ""),
         )
-        for column, (caption, url, object_name) in enumerate(
+        for column, (caption, url, object_name, icon_name) in enumerate(
             social_destinations
         ):
             social_grid.addWidget(
-                self._link_button(caption, url, object_name), 0, column
+                self._link_button(
+                    caption, url, object_name, icon_name=icon_name
+                ),
+                0,
+                column,
             )
         links.layout().addLayout(social_grid)
         root.addWidget(links)
@@ -199,13 +206,16 @@ class AboutDialog(QDialog):
         layout.addWidget(_plain_label(title, "aboutSection"))
         return frame
 
-    def _link_button(self, caption, url, object_name):
+    def _link_button(self, caption, url, object_name, icon_name=""):
         button = QPushButton(caption)
         button.setObjectName(object_name)
         button.setToolTip(url)
         button.setCursor(Qt.PointingHandCursor)
         button.setMinimumHeight(34)
         button.setAutoDefault(False)
+        if icon_name:
+            button.setIcon(QIcon(str(Path(__file__).with_name(icon_name))))
+            button.setIconSize(QSize(18, 18))
         button.clicked.connect(partial(self._open_url, url))
         return button
 

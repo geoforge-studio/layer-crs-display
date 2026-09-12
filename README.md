@@ -2,10 +2,13 @@
 
 Maintainer: GeoForge Studio | QGIS 3.22–3.x (declared range; native validation pending)
 
-The CRS toolbar has two labelled buttons, ordered left to right:
+The CRS toolbar has two compact, boxed, icon-only buttons ordered left to right.
+Their full labels remain available in tooltips and the Plugins menu:
 
-- **Display CRS** (layers and eye): show or hide CRS information in the Layers panel.
-- **Reproject** (globe and arrow): open the batch reprojection dialog.
+- **Display CRS** (layers and eye): show or hide CRS information in the Layers
+  panel. The icon and button border change between inactive and active states.
+- **Reproject** (geographic grid, planar grid and arrow): open the batch
+  reprojection dialog.
 
 All plugin interface text, tooltips, messages and documentation are in English. Layer names and attribute values retain their original language. When upgrading from a pre-GeoForge build, disable the old version before installing and restart QGIS. Display preferences and the last output folder reset once under the new settings namespace. Older CRS widget entries are replaced; unrelated embedded widgets are retained.
 
@@ -116,6 +119,9 @@ contain layer names, file paths and subset filters; redact sensitive content bef
 sharing a report.
 
 ## GeoForge Studio
+
+The About dialog presents these destinations as labelled buttons. The social
+buttons include small monochrome platform symbols.
 
 - [LinkedIn](https://www.linkedin.com/in/geoforge-studio-668319436)
 - [Instagram](https://www.instagram.com/geoforge_studio)

@@ -151,9 +151,14 @@ about = AboutDialog(
 )
 about.show()
 app.processEvents()
-for _caption, expected_url, object_name in PLUGIN_LINKS + SOCIAL_LINKS:
+for _caption, expected_url, object_name in PLUGIN_LINKS:
     button = about.findChild(QtWidgets.QPushButton, object_name)
     assert button is not None
+    button.click()
+    assert opened_urls[-1] == expected_url
+for _caption, expected_url, object_name, _icon_name in SOCIAL_LINKS:
+    button = about.findChild(QtWidgets.QPushButton, object_name)
+    assert button is not None and not button.icon().isNull()
     button.click()
     assert opened_urls[-1] == expected_url
 email_button = about.findChild(QtWidgets.QPushButton, 'emailLink')
@@ -179,6 +184,57 @@ gui.QgsGui = types.SimpleNamespace()
 gui.QgsLayerTreeEmbeddedWidgetProvider = object
 from layer_crs_display.plugin import LayerCrsDisplayPlugin
 from layer_crs_display.crs_widget import PROVIDER_ID
+
+
+class ToolbarIface:
+    def __init__(self):
+        self.window = QtWidgets.QMainWindow()
+        self.menu_actions = []
+
+    def mainWindow(self):
+        return self.window
+
+    def addToolBar(self, title):
+        toolbar = QtWidgets.QToolBar(title, self.window)
+        self.window.addToolBar(toolbar)
+        return toolbar
+
+    def addPluginToMenu(self, _menu, action):
+        self.menu_actions.append(action)
+
+    def removePluginMenu(self, _menu, action):
+        if action in self.menu_actions:
+            self.menu_actions.remove(action)
+
+
+toolbar_iface = ToolbarIface()
+toolbar_controller = LayerCrsDisplayPlugin.__new__(LayerCrsDisplayPlugin)
+toolbar_controller.iface = toolbar_iface
+toolbar_controller.toolbar = None
+toolbar_controller.toggle_action = None
+toolbar_controller.batch_action = None
+toolbar_controller.settings_action = None
+toolbar_controller.about_action = None
+toolbar_controller.read_settings = lambda: {
+    'enabled': False,
+    'display_format': 'authid',
+}
+toolbar_controller._create_actions()
+assert toolbar_controller.toolbar.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
+assert toolbar_controller.toolbar.iconSize() == QtCore.QSize(28, 28)
+display_button = toolbar_controller.toolbar.widgetForAction(
+    toolbar_controller.toggle_action
+)
+reproject_button = toolbar_controller.toolbar.widgetForAction(
+    toolbar_controller.batch_action
+)
+assert display_button.objectName() == 'GeoForgeDisplayCrsButton'
+assert reproject_button.objectName() == 'GeoForgeReprojectButton'
+assert 'border: 1px solid palette(mid)' in toolbar_controller.toolbar.styleSheet()
+off_icon_key = toolbar_controller.toggle_action.icon().cacheKey()
+toolbar_controller._update_display_icon(True)
+assert toolbar_controller.toggle_action.icon().cacheKey() != off_icon_key
+toolbar_controller._remove_actions()
 
 
 class WidgetLayer:

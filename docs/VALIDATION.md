@@ -4,11 +4,17 @@
 - PASS: real PyQt5 interface checks at three batch-dialog sizes, plus the new
   About dialog. Each project, social and email destination was exercised with
   an injected URL opener; the test made no network request or browser launch.
+- PASS: toolbar checks confirm icon-only buttons at 28 px, permanent boxed
+  button styling, distinct Display CRS on/off icons and the active green state.
+- PASS: all seven bundled SVG assets parse as valid XML. Visual checks confirm
+  readable toolbar boxes in both Display CRS states and branded social glyphs
+  in the About dialog.
 - PASS: Python syntax and release-package structure checks. The installation ZIP
   contains one top-level plugin directory and excludes development tests.
 - PASS: extracted installation ZIP, Bandit 1.9.4 default rules: zero findings,
   zero scan errors and no rule suppressions.
-- PASS: Flake8 7.3.0 on the new About module and E731 across runtime code.
+- PASS: Flake8 7.3.0 on the changed plugin/About modules and E731 across all
+  runtime code.
 - Reprojection code and declared QGIS 3 compatibility are unchanged.
 - No new native QGIS/GDAL test is claimed for this interface-only update.
 

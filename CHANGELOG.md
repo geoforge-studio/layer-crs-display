@@ -4,6 +4,11 @@
 - Add direct links to the official QGIS plugin page, source repository, issue
   tracker and GeoForge Studio email.
 - Add the supplied GeoForge Studio LinkedIn, Instagram and Telegram pages.
+- Introduce a coordinated blue-and-green SVG icon family for the plugin,
+  Display CRS, Reproject and the social destinations.
+- Use two compact icon-only toolbar buttons with permanent rounded boxes,
+  tooltips and theme-aware styling.
+- Give Display CRS distinct inactive and active icons and a checked-state border.
 - Keep reprojection behavior and the declared QGIS 3 compatibility range unchanged.
 
 # 0.5.4 — code quality fix (experimental)

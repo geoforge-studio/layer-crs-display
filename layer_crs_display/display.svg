@@ -1,6 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-<path d="M3 8 13 3 23 8 13 13Z" fill="#e2effa" stroke="#245b88" stroke-width="1.8" stroke-linejoin="round"/>
-<path d="m3 13 10 5 6-3M3 18l7 3" fill="none" stroke="#245b88" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M11 23q9-12 18 0-9 12-18 0Z" fill="#fff" stroke="#245b88" stroke-width="1.8"/>
-<circle cx="20" cy="23" r="3.3" fill="#245b88"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <path d="M6 18 25 8l19 10-19 10Z" fill="#E2EFFA"
+        stroke="#245B88" stroke-width="3" stroke-linejoin="round"/>
+  <path d="m7 29 18 10 14-7M7 40l15 8" fill="none"
+        stroke="#245B88" stroke-width="3" stroke-linecap="round"
+        stroke-linejoin="round"/>
+  <path d="M27 43c8-12 22-12 31 0-9 12-23 12-31 0Z"
+        fill="#FFFFFF" stroke="#18775A" stroke-width="3"
+        stroke-linejoin="round"/>
+  <circle cx="42.5" cy="43" r="5.5" fill="#18775A"/>
+  <circle cx="44" cy="41.5" r="1.7" fill="#FFFFFF" opacity="0.9"/>
 </svg>
