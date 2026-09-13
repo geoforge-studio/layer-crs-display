@@ -20,7 +20,9 @@ class CrsDisplayWidget(QWidget):
         self._layer = layer
         self._settings_reader = settings_reader
 
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
         self.setMaximumHeight(24)
 
         layout = QHBoxLayout(self)
@@ -29,9 +31,13 @@ class CrsDisplayWidget(QWidget):
         layout.addStretch(1)
 
         self.label = QLabel(self)
-        self.label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.label.setLayoutDirection(Qt.LeftToRight)
-        self.label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.label.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        self.label.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
         layout.addWidget(self.label, 0)
 
         self.refresh()

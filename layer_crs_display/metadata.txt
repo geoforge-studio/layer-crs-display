@@ -1,20 +1,20 @@
 [general]
 name=Layer CRS Display
 qgisMinimumVersion=3.22
-qgisMaximumVersion=3.99
+qgisMaximumVersion=4.99
 description=Displays each layer CRS and batch reprojects selected vector and raster layers with a target CRS, output folder and name suffix.
-version=0.6.1
+version=0.7.1
 author=GeoForge Studio
 email=reynolds.mach88@gmail.com
-about=Displays layer CRS without renaming original layers. Batch reprojection saves selected vectors to GeoPackage and GDAL rasters to GeoTIFF. Includes output previews, suffix naming, conflict checks, progress, cancellation, JSON reports and an About dialog with official GeoForge links. Requires Processing and its GDAL provider for rasters. QGIS 3 only; native QGIS acceptance testing is pending for this release candidate.
+about=Displays layer CRS without renaming original layers. Batch reprojection saves selected vectors to GeoPackage and GDAL rasters to GeoTIFF. Includes output previews, suffix naming, conflict checks, progress, cancellation, JSON reports and an About dialog with official GeoForge links. Requires Processing and its GDAL provider for rasters. Supports QGIS 3 and QGIS 4.
 homepage=https://github.com/geoforge-studio/layer-crs-display#readme
 repository=https://github.com/geoforge-studio/layer-crs-display
 tracker=https://github.com/geoforge-studio/layer-crs-display/issues
 license=GPL-2.0-or-later
-changelog=0.6.1: Prevent QGIS toolbar preferences and Qt icon caching from retaining the previous labelled toolbar. Uses uniquely named SVG assets and enforces two boxed icon-only buttons. Processing behavior remains unchanged. 0.6.0 added the About dialog and GeoForge links.
+changelog=0.7.1: Promote the dual-compatible QGIS 3/Qt5 and QGIS 4/Qt6 build to stable after successful maintainer testing in both QGIS generations. No feature, interface or processing behavior changes from 0.7.0.
 category=Vector
 tags=crs,epsg,coordinate reference system,layer tree,projection
 icon=plugin_061.svg
-experimental=True
+experimental=False
 deprecated=False
 hasProcessingProvider=False

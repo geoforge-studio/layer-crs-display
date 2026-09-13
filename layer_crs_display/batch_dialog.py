@@ -20,7 +20,7 @@ SETTINGS = 'GeoForge/LayerCrsDisplay/batch/'
 def label(text):
     widget = QLabel(text)
     widget.setWordWrap(True)
-    widget.setTextFormat(Qt.PlainText)
+    widget.setTextFormat(Qt.TextFormat.PlainText)
     return widget
 
 
@@ -30,7 +30,7 @@ class BatchDialog(QDialog):
         self.iface = iface
         self.project = QgsProject.instance()
         self.setWindowTitle('CRS — Batch Reprojection')
-        self.setLayoutDirection(Qt.LeftToRight)
+        self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         self.setMinimumSize(0, 0)
         self.resize(900, 620)
         screen = QApplication.primaryScreen()
@@ -124,8 +124,10 @@ class BatchDialog(QDialog):
 
         self.controls, setup = card('1  Set the destination')
         form = QFormLayout()
-        form.setRowWrapPolicy(QFormLayout.WrapLongRows)
-        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+        form.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+        )
         form.setSpacing(10)
         self.target = QgsProjectionSelectionWidget()
         self.target.setCrs(self.project.crs())
@@ -183,15 +185,23 @@ class BatchDialog(QDialog):
         layers_box.addWidget(self.summary)
         self.table = QTableWidget(0, 6)
         self.table.setHorizontalHeaderLabels(['Use', 'Layer name', 'Source CRS', 'New layer name', 'Output file', 'Status'])
-        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers
+        )
+        self.table.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
         self.table.setMinimumSize(0, 200)
-        self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.table.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
         self.table.verticalHeader().setVisible(False)
         self.table.verticalHeader().setDefaultSectionSize(32)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Interactive
+        )
         self.table.horizontalHeader().setStretchLastSection(True)
         for col, width in enumerate((44, 160, 115, 175, 175, 250)):
             self.table.setColumnWidth(col, width)
@@ -202,9 +212,11 @@ class BatchDialog(QDialog):
 
         self.advanced_button = QToolButton()
         self.advanced_button.setText('Advanced options')
-        self.advanced_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.advanced_button.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
         self.advanced_button.setCheckable(True)
-        self.advanced_button.setArrowType(Qt.RightArrow)
+        self.advanced_button.setArrowType(Qt.ArrowType.RightArrow)
         layout.addWidget(self.advanced_button)
         self.options = QFrame()
         self.options.setObjectName('card')
@@ -214,7 +226,9 @@ class BatchDialog(QDialog):
         self.resampling.addItem('Bilinear — continuous data', 1)
         self.resampling.addItem('Cubic — continuous data', 2)
         self.resampling.setMinimumContentsLength(12)
-        self.resampling.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.resampling.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
         opts.addWidget(label('Raster resampling'))
         opts.addWidget(self.resampling)
         self.add = QCheckBox('Add outputs to the project')
@@ -228,8 +242,12 @@ class BatchDialog(QDialog):
         self.options.hide()
         self.advanced_button.toggled.connect(self.toggle_advanced)
         self.status = label('')
-        self.status.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.status.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self.status.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.status.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )
         layout.addWidget(self.status)
         layout.addStretch()
         scroll.setWidget(content)
@@ -239,7 +257,9 @@ class BatchDialog(QDialog):
         # Persistent footer: execution controls never scroll out of view.
         self.footer_status = label('Choose an output folder to get started.')
         self.footer_status.setObjectName('muted')
-        self.footer_status.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self.footer_status.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )
         outer.addWidget(self.footer_status)
         self.progress = QProgressBar()
         self.progress.setFixedHeight(16)
@@ -272,7 +292,11 @@ class BatchDialog(QDialog):
 
     def toggle_advanced(self, expanded):
         self.options.setVisible(expanded)
-        self.advanced_button.setArrowType(Qt.DownArrow if expanded else Qt.RightArrow)
+        self.advanced_button.setArrowType(
+            Qt.ArrowType.DownArrow
+            if expanded
+            else Qt.ArrowType.RightArrow
+        )
 
     def filter_rows(self, *args):
         query = self.search.text().strip().casefold()
@@ -284,7 +308,10 @@ class BatchDialog(QDialog):
             match = not query or any(query in item.text().casefold() for item in values if item)
             self.table.setRowHidden(row, not match)
             visible += int(match)
-            selected = self.table.item(row, 0).checkState() == Qt.Checked
+            selected = (
+                self.table.item(row, 0).checkState()
+                == Qt.CheckState.Checked
+            )
             checked += int(selected)
             hidden_checked += int(selected and not match)
         self.summary.setText('{} selected  •  {} of {} shown{}'.format(
@@ -306,7 +333,12 @@ class BatchDialog(QDialog):
 
     def refresh(self):
         if self.runner.active: return
-        chosen = {key for row,key in enumerate(self.layer_ids) if self.table.item(row,0).checkState()==Qt.Checked}
+        chosen = {
+            key
+            for row, key in enumerate(self.layer_ids)
+            if self.table.item(row, 0).checkState()
+            == Qt.CheckState.Checked
+        }
         self.refreshing = True
         self.table.blockSignals(True)
         layers = []
@@ -319,9 +351,18 @@ class BatchDialog(QDialog):
         for row, layer in enumerate(layers):
             problem = eligibility(layer, self.target.crs())
             check = QTableWidgetItem()
-            check.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable if not problem else Qt.NoItemFlags)
-            check.setCheckState(Qt.Checked if not problem and (not self.manual_selection or layer.id() in chosen) else Qt.Unchecked)
-            check.setData(Qt.UserRole, not bool(problem))
+            check.setFlags(
+                Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable
+                if not problem
+                else Qt.ItemFlag.NoItemFlags
+            )
+            check.setCheckState(
+                Qt.CheckState.Checked
+                if not problem
+                and (not self.manual_selection or layer.id() in chosen)
+                else Qt.CheckState.Unchecked
+            )
+            check.setData(Qt.ItemDataRole.UserRole, not bool(problem))
             self.table.setItem(row, 0, check)
             for col, text in ((1, layer.name()), (2, layer.crs().authid() or layer.crs().description()), (3, ''), (4, ''), (5, problem)):
                 self.table.setItem(row, col, QTableWidgetItem(text))
@@ -336,8 +377,13 @@ class BatchDialog(QDialog):
         self.table.blockSignals(True)
         for row, layer_id in enumerate(self.layer_ids):
             item = self.table.item(row, 0)
-            if item.data(Qt.UserRole):
-                item.setCheckState(Qt.Checked if mode=='all' or (mode=='selected' and layer_id in selected) else Qt.Unchecked)
+            if item.data(Qt.ItemDataRole.UserRole):
+                item.setCheckState(
+                    Qt.CheckState.Checked
+                    if mode == 'all'
+                    or (mode == 'selected' and layer_id in selected)
+                    else Qt.CheckState.Unchecked
+                )
         self.table.blockSignals(False)
         self.preview()
         self.filter_rows()
@@ -351,7 +397,11 @@ class BatchDialog(QDialog):
     def selected_items(self):
         items = []
         for row, layer_id in enumerate(self.layer_ids):
-            if self.table.item(row, 0).checkState() != Qt.Checked: continue
+            if (
+                self.table.item(row, 0).checkState()
+                != Qt.CheckState.Checked
+            ):
+                continue
             layer = self.project.mapLayer(layer_id)
             if layer is None: raise ValueError('A layer has been removed. Refresh the list.')
             if same_crs(layer.crs(), self.target.crs()): continue
@@ -376,7 +426,9 @@ class BatchDialog(QDialog):
                         self.table.item(row,col).setToolTip(
                             plan['output_path'] + (' | layer: ' + plan['output_layer'] if plan['output_layer'] else '')
                             if col==4 else text)
-                elif self.table.item(row,0).data(Qt.UserRole):
+                elif self.table.item(row, 0).data(
+                    Qt.ItemDataRole.UserRole
+                ):
                     for col in (3,4): self.table.item(row,col).setText('')
                     self.table.item(row,5).setText('Not selected')
             ready = bool(plans) and self.target.crs().isValid() and bool(self.folder.text().strip()) and Path(self.folder.text()).is_dir() and not any(p['error'] for p in plans)

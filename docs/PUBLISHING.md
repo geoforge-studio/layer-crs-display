@@ -9,15 +9,17 @@
 - Public contact: reynolds.mach88@gmail.com.
 - Public source: https://github.com/geoforge-studio/layer-crs-display
 - Issue tracker: https://github.com/geoforge-studio/layer-crs-display/issues
-- Experimental flag while native acceptance remains pending.
+- Stable metadata after successful maintainer checks in QGIS 3 and QGIS 4.
 
 ## Before QGIS submission
 
-1. Complete native testing in `TESTING.md`; record actual tested versions/platforms.
+1. Complete the full `TESTING.md` matrix independently in QGIS 3/Qt5 and
+   QGIS 4/Qt6; record actual tested versions and platforms.
 2. Confirm that homepage, repository and issue-tracker URLs remain accessible.
-3. Run `python tools/build_zip.py --release`. Keep experimental status unless
-   native validation supports a stable release. The ZIP must match the committed
-   source. GitHub's auto-generated source ZIP is not the QGIS installation archive.
+3. Run `python tools/build_zip.py --release`. Version 0.7.1 uses stable metadata
+   following the maintainer's dual-QGIS tests. Do not upload it if the final smoke
+   check fails. The ZIP must match the committed source. GitHub's auto-generated
+   source ZIP is not the QGIS installation archive.
 4. Upload the installation ZIP to the QGIS plugin portal. Automated security
    checks and manual review still apply; publishing source on GitHub does not
    mean the plugin has been approved by QGIS.

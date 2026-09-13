@@ -1,3 +1,21 @@
+# 0.7.1 — stable dual-QGIS release
+
+- Promote the QGIS 3/Qt5 and QGIS 4/Qt6 compatible 0.7.0 candidate to stable
+  after successful maintainer testing in both QGIS generations.
+- Keep all features, interface elements, output formats and processing behavior
+  unchanged from 0.7.0.
+
+# 0.7.0 — QGIS 3 and QGIS 4 compatibility (experimental)
+
+- Target QGIS 3.22–4.x from one package while continuing to import Qt only
+  through the `qgis.PyQt` compatibility layer.
+- Use scoped Qt and QGIS enums accepted by both Qt5 and Qt6.
+- Import `QAction` from its Qt6 location with a Qt5 fallback.
+- Replace deprecated dialog-loop and field-type APIs with their shared forms.
+- Keep the interface, outputs, processing workflow and feature set unchanged.
+- Remain experimental until native acceptance is recorded separately in QGIS 3
+  and QGIS 4.
+
 # 0.6.1 — toolbar refresh fix (experimental)
 
 - Use uniquely named plugin and toolbar SVG files so Qt cannot reuse cached

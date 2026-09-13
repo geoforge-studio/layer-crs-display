@@ -9,10 +9,21 @@ from datetime import datetime
 from pathlib import Path
 
 from qgis.PyQt.QtCore import QObject, pyqtSignal, QTimer
-from qgis.core import (QgsApplication, QgsCoordinateReferenceSystem, QgsProcessingAlgRunnerTask,
+from qgis.core import (Qgis, QgsApplication, QgsCoordinateReferenceSystem, QgsProcessingAlgRunnerTask,
     QgsProcessingContext, QgsProcessingFeedback, QgsFeatureRequest, QgsVectorLayer,
     QgsRasterLayer, QgsMapLayerStyle)
 from .batch_logic import SIDECARS
+
+
+_invalid_geometry_enum = getattr(Qgis, 'InvalidGeometryCheck', None)
+if _invalid_geometry_enum is not None:
+    GEOMETRY_ABORT_ON_INVALID = getattr(
+        _invalid_geometry_enum, 'AbortOnInvalid'
+    )
+else:  # QGIS 3.22 compatibility
+    GEOMETRY_ABORT_ON_INVALID = getattr(
+        QgsFeatureRequest, 'GeometryAbortOnInvalid'
+    )
 
 
 def same_crs(source, target):
@@ -161,7 +172,7 @@ class BatchRunner(QObject):
             self.context = QgsProcessingContext()
             self.context.setProject(self.project)
             self.context.setTransformContext(self.project.transformContext())
-            self.context.setInvalidGeometryCheck(QgsFeatureRequest.GeometryAbortOnInvalid)
+            self.context.setInvalidGeometryCheck(GEOMETRY_ABORT_ON_INVALID)
             self.feedback = ConversionFeedback()
             self.feedback.progressChanged.connect(self._progress)
             self.current['subset_filter'] = layer.subsetString() if isinstance(layer, QgsVectorLayer) else ''

@@ -1,13 +1,16 @@
 """Real Qt, real filesystem; explicit fake GIS/provider/task boundaries.
 This does NOT validate coordinate transformation, GDAL or native QGIS.
-Run with PyQt5 installed and QT_QPA_PLATFORM=offscreen.
+Run with PyQt6 or PyQt5 installed and QT_QPA_PLATFORM=offscreen.
 """
 import json
 import sys
 import tempfile
 import types
 from pathlib import Path
-from PyQt5 import QtCore, QtWidgets, QtGui
+try:
+    from PyQt6 import QtCore, QtWidgets, QtGui
+except ImportError:
+    from PyQt5 import QtCore, QtWidgets, QtGui
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 qgis=types.ModuleType('qgis'); core=types.ModuleType('qgis.core'); gui=types.ModuleType('qgis.gui')
@@ -135,7 +138,12 @@ registry=types.SimpleNamespace(algorithmById=lambda key:key)
 for name,value in dict(QgsCoordinateReferenceSystem=CRS,QgsVectorLayer=Vector,QgsRasterLayer=Raster,
     QgsProject=Project,QgsSettings=Settings,QgsProcessingFeedback=Feedback,QgsProcessingContext=Context,
     QgsMapLayerStyle=Style,QgsFeatureRequest=types.SimpleNamespace(GeometryAbortOnInvalid=2),
-    QgsProcessingAlgRunnerTask=Task,QgsApplication=types.SimpleNamespace(processingRegistry=lambda:registry,taskManager=lambda:manager)).items():setattr(core,name,value)
+    QgsProcessingAlgRunnerTask=Task,QgsApplication=types.SimpleNamespace(processingRegistry=lambda:registry,taskManager=lambda:manager),
+    Qgis=types.SimpleNamespace(
+        InvalidGeometryCheck=types.SimpleNamespace(AbortOnInvalid=2),
+        MessageLevel=types.SimpleNamespace(Info=0)),
+    QgsLayerTreeModel=types.SimpleNamespace(
+        Flag=types.SimpleNamespace(UseEmbeddedWidgets=1))).items():setattr(core,name,value)
 gui.QgsProjectionSelectionWidget=ProjectionWidget
 
 from layer_crs_display.batch_engine import BatchRunner, eligibility, same_crs
@@ -146,7 +154,7 @@ app=QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 opened_urls = []
 about = AboutDialog(
-    '0.6.1',
+    '0.7.1',
     url_opener=lambda url: opened_urls.append(url.toString()),
 )
 about.show()
@@ -165,7 +173,7 @@ email_button = about.findChild(QtWidgets.QPushButton, 'emailLink')
 assert email_button is not None
 email_button.click()
 assert opened_urls[-1] == 'mailto:reynolds.mach88@gmail.com'
-assert about.findChild(QtWidgets.QLabel, 'aboutVersion').text() == 'Version 0.6.1  |  QGIS 3'
+assert about.findChild(QtWidgets.QLabel, 'aboutVersion').text() == 'Version 0.7.1  |  QGIS 3 / 4'
 about.close()
 
 assert same_crs(CRS('EPSG:32639'), CRS('EPSG:32639'))
@@ -178,8 +186,6 @@ assert not same_crs(epoch_a, epoch_b)
 
 # Exercise actual plugin methods for upgrade compatibility, with fake registry
 # types only. Existing unrelated layer-widget entries must survive migration.
-core.Qgis = types.SimpleNamespace(Info=0)
-core.QgsLayerTreeModel = types.SimpleNamespace(UseEmbeddedWidgets=1)
 gui.QgsGui = types.SimpleNamespace()
 gui.QgsLayerTreeEmbeddedWidgetProvider = object
 from layer_crs_display.plugin import LayerCrsDisplayPlugin
@@ -220,7 +226,9 @@ toolbar_controller.read_settings = lambda: {
     'display_format': 'authid',
 }
 toolbar_controller._create_actions()
-assert toolbar_controller.toolbar.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
+assert toolbar_controller.toolbar.toolButtonStyle() == (
+    QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly
+)
 assert toolbar_controller.toolbar.iconSize() == QtCore.QSize(28, 28)
 display_button = toolbar_controller.toolbar.widgetForAction(
     toolbar_controller.toggle_action
@@ -231,13 +239,25 @@ reproject_button = toolbar_controller.toolbar.widgetForAction(
 assert display_button.objectName() == 'GeoForgeDisplayCrsButton'
 assert reproject_button.objectName() == 'GeoForgeReprojectButton'
 assert 'border: 1px solid palette(mid)' in toolbar_controller.toolbar.styleSheet()
-assert display_button.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
-assert reproject_button.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
-toolbar_controller.toolbar.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+assert display_button.toolButtonStyle() == (
+    QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly
+)
+assert reproject_button.toolButtonStyle() == (
+    QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly
+)
+toolbar_controller.toolbar.setToolButtonStyle(
+    QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+)
 app.processEvents()
-assert toolbar_controller.toolbar.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
-assert display_button.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
-assert reproject_button.toolButtonStyle() == QtCore.Qt.ToolButtonIconOnly
+assert toolbar_controller.toolbar.toolButtonStyle() == (
+    QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly
+)
+assert display_button.toolButtonStyle() == (
+    QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly
+)
+assert reproject_button.toolButtonStyle() == (
+    QtCore.Qt.ToolButtonStyle.ToolButtonIconOnly
+)
 off_icon_key = toolbar_controller.toggle_action.icon().cacheKey()
 toolbar_controller._update_display_icon(True)
 assert toolbar_controller.toggle_action.icon().cacheKey() != off_icon_key
@@ -297,9 +317,9 @@ with tempfile.TemporaryDirectory() as temp:
         dialog.resize(width,height);dialog.folder.setText(str(root/'out'));dialog.suffix.setText('_39')
         dialog.show();app.processEvents()
         assert dialog.table.rowCount()==3
-        assert dialog.table.item(0,0).checkState()==QtCore.Qt.Checked
-        assert not dialog.table.item(1,0).data(QtCore.Qt.UserRole)
-        assert not dialog.table.item(2,0).data(QtCore.Qt.UserRole)
+        assert dialog.table.item(0,0).checkState()==QtCore.Qt.CheckState.Checked
+        assert not dialog.table.item(1,0).data(QtCore.Qt.ItemDataRole.UserRole)
+        assert not dialog.table.item(2,0).data(QtCore.Qt.ItemDataRole.UserRole)
         assert dialog.run_button.isEnabled()
         for button in (dialog.run_button,dialog.cancel_button,dialog.close_button):
             point=button.mapTo(dialog,QtCore.QPoint(0,0))

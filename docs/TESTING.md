@@ -10,14 +10,14 @@ QT_QPA_PLATFORM=offscreen python tests/qt_batch_acceptance.py
 python tools/build_zip.py
 ```
 
-The second command needs PyQt5 in the test environment. On Windows PowerShell,
+The second command uses PyQt6 when available and otherwise PyQt5. On Windows PowerShell,
 set `$env:QT_QPA_PLATFORM = 'offscreen'` and run the Python command separately.
 These tests use simulated GIS objects; they are not native reprojection tests.
 
 ## Native acceptance (required before claiming support)
 
-1. Use a QGIS 3 installation and a disposable project/profile. Enable Processing
-   and its GDAL provider. QGIS 4/Qt6 is not supported by this candidate.
+1. Prepare one supported QGIS 3/Qt5 installation and one QGIS 4/Qt6 installation,
+   each with a disposable project/profile. Enable Processing and its GDAL provider.
 2. Disable any older installed version, install the generated ZIP through
    **Plugins > Manage and Install Plugins > Install from ZIP**, then restart QGIS.
 3. Confirm the **CRS** toolbar has **Display CRS** and **Reproject** buttons.
@@ -44,9 +44,10 @@ time; the test waits for the task to finish before freeing its context.
 5. Run a batch containing two vector layers needing conversion and one already in the target CRS. Confirm that exactly one GeoPackage contains only the two converted layers and that both load using their own layer names. Repeat with a custom GeoPackage filename and with raster inputs (GeoTIFF). Run small real vector and raster batches through the dialog. Test an existing
    output conflict, cancellation, filtered input, custom suffix, missing source
    CRS and a transformation requiring a locally installed datum grid.
-6. Record QGIS, Qt, GDAL and OS versions, results and any traceback. Do not mark
-   untested platforms or versions as passed. Add authentic screenshots only after
-   the interface has been exercised in native QGIS.
+6. Repeat the complete test independently in QGIS 3 and QGIS 4. Record QGIS, Qt,
+   Python, GDAL and OS versions, results and any traceback for each run. Do not
+   mark untested platforms or versions as passed. Add authentic screenshots only
+   after the interface has been exercised in native QGIS.
 
 ## Installation archive security scan
 
@@ -56,5 +57,8 @@ default rules without suppressions. Development tests remain available under
 
 ## Current status
 
-The maintainer reported a successful basic QGIS check of 0.5.2. The complete native acceptance suite and an exact QGIS/OS version record are still pending. The declared 3.22–3.x metadata range is
-inherited from the supplied version and is not a tested-platform matrix.
+The maintainer reported successful functional checks of the 0.7.0 candidate in
+both QGIS 3 and QGIS 4. Exact QGIS, Qt, Python, GDAL and OS versions and the
+complete native acceptance output have not yet been recorded. The declared
+3.22–4.x metadata range is a compatibility range, not a claim that every release
+and platform combination was tested.

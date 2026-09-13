@@ -1,3 +1,45 @@
+# Validation of release 0.7.1
+
+- PASS: the maintainer confirmed that the 0.7.0 package functions in both
+  QGIS 3 and QGIS 4.
+- PASS: 0.7.1 changes only the version, stable metadata and validation records;
+  runtime compatibility and processing behavior are identical to 0.7.0.
+- PASS: metadata and runtime version agree at 0.7.1, the declared range remains
+  QGIS 3.22–4.x and `experimental=False` is set.
+- PASS: 13 portable tests, real PyQt5 interface/batch lifecycle tests, Python
+  compilation and reproducible installation-archive construction.
+- RECORD STILL REQUIRED: exact QGIS, Qt, Python, GDAL and OS versions and the
+  output of the complete native acceptance script for each tested environment.
+
+# Validation of candidate 0.7.0
+
+- PASS: metadata and runtime version agree at 0.7.0; the declared range is
+  QGIS 3.22–4.x and `experimental=True` remains set.
+- PASS: 13 portable output-planning and collision tests.
+- PASS: the real PyQt5 interface/batch lifecycle suite at three dialog sizes,
+  including toolbar state, widget migration, success/failure, cancellation,
+  shared GeoPackage behavior, same-CRS exclusion and raster parameters.
+- PASS: every runtime import uses the QGIS-provided `qgis.PyQt` layer. Qt and
+  QGIS enum references use their scoped forms; `QAction` has Qt6 and Qt5 import
+  paths; dialog loops use `exec()`.
+- PASS: the QGIS 3 fallback and the QGIS 4.2 `Qgis.InvalidGeometryCheck`
+  member names are handled separately.
+- PASS: Python compilation, installation-archive integrity, one-directory ZIP
+  layout and reproducible release construction.
+- PASS: comparison with 0.6.1 shows only compatibility API substitutions,
+  version/compatibility labels and documentation changes; processing logic and
+  feature behavior are unchanged.
+- NOT RUN in this build environment: native QGIS 4/Qt6 loading and Processing/
+  GDAL acceptance. The QGIS repository's `pyqgis4-checker` will also run only
+  after upload.
+- NOT REPEATED: the complete native QGIS 3 Processing/GDAL acceptance suite.
+  The maintainer has reported successful functional checks of 0.6.1 in QGIS 3.
+
+Keep 0.7.0 experimental until the same native acceptance procedure passes and
+the exact environment is recorded independently for QGIS 3 and QGIS 4.
+
+## Previous checks
+
 # Validation of candidate 0.6.1
 
 - PASS: 13 portable tests and real PyQt5 interface checks at three dialog sizes.
@@ -12,8 +54,6 @@
 - Reprojection code and the declared QGIS 3 compatibility range are unchanged.
 - A full QGIS restart remains part of the installation check because Python
   plugin modules already loaded by the application cannot be replaced in place.
-
-## Previous checks
 
 # Validation of candidate 0.6.0
 

@@ -9,7 +9,13 @@ from qgis.core import Qgis, QgsLayerTreeModel, QgsProject, QgsSettings
 from qgis.gui import QgsGui
 from qgis.PyQt.QtCore import QSize, Qt, QTimer
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QDialog
+from qgis.PyQt.QtWidgets import QDialog
+
+try:
+    # QAction moved from QtWidgets in Qt 5 to QtGui in Qt 6.
+    from qgis.PyQt.QtGui import QAction
+except ImportError:  # QGIS 3 / Qt 5
+    from qgis.PyQt.QtWidgets import QAction
 
 from .about_dialog import AboutDialog
 from .crs_widget import PROVIDER_ID, CrsDisplayWidgetProvider
@@ -17,7 +23,7 @@ from .settings_dialog import SettingsDialog
 
 
 PLUGIN_NAME = "Layer CRS Display"
-PLUGIN_VERSION = "0.6.1"
+PLUGIN_VERSION = "0.7.1"
 SETTINGS_GROUP = "GeoForge/LayerCrsDisplay"
 
 
@@ -100,8 +106,10 @@ class LayerCrsDisplayPlugin:
 
         self.toolbar = self.iface.addToolBar("CRS")
         self.toolbar.setObjectName("GeoForgeLayerCrsToolbar")
-        self.toolbar.setLayoutDirection(Qt.LeftToRight)
-        self.toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.toolbar.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        self.toolbar.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonIconOnly
+        )
         self.toolbar.setIconSize(QSize(28, 28))
         self.toolbar.setStyleSheet(
             """
@@ -162,7 +170,9 @@ class LayerCrsDisplayPlugin:
         button = self.toolbar.widgetForAction(action)
         if button is not None:
             button.setObjectName(object_name)
-            button.setToolButtonStyle(Qt.ToolButtonIconOnly)
+            button.setToolButtonStyle(
+                Qt.ToolButtonStyle.ToolButtonIconOnly
+            )
             button.setIconSize(QSize(28, 28))
             button.setAccessibleName(action.text())
             button.style().unpolish(button)
@@ -172,7 +182,9 @@ class LayerCrsDisplayPlugin:
     def _enforce_toolbar_button_style(self):
         if self.toolbar is None:
             return
-        self.toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.toolbar.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonIconOnly
+        )
         self._configure_toolbar_button(
             self.toggle_action, "GeoForgeDisplayCrsButton"
         )
@@ -181,7 +193,7 @@ class LayerCrsDisplayPlugin:
         )
 
     def _keep_toolbar_icon_only(self, style):
-        if style != Qt.ToolButtonIconOnly:
+        if style != Qt.ToolButtonStyle.ToolButtonIconOnly:
             QTimer.singleShot(0, self._enforce_toolbar_button_style)
 
     def _remove_actions(self):
@@ -213,11 +225,11 @@ class LayerCrsDisplayPlugin:
             )
         elif not self._batch_dialog.runner.active:
             self._batch_dialog.refresh()
-        self._batch_dialog.exec_()
+        self._batch_dialog.exec()
 
     def show_settings(self):
         dialog = SettingsDialog(self.read_settings(), self.iface.mainWindow())
-        if dialog.exec_() != QDialog.Accepted:
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
         previous = self.read_settings()
@@ -238,7 +250,7 @@ class LayerCrsDisplayPlugin:
 
     def show_about(self):
         dialog = AboutDialog(PLUGIN_VERSION, self.iface.mainWindow())
-        dialog.exec_()
+        dialog.exec()
 
     def _on_toggle(self, checked):
         self._update_display_icon(checked)
@@ -252,7 +264,10 @@ class LayerCrsDisplayPlugin:
             self._remove_widgets_from_all_layers()
             message = "Layer CRS display disabled."
         self.iface.messageBar().pushMessage(
-            PLUGIN_NAME, message, level=Qgis.Info, duration=3
+            PLUGIN_NAME,
+            message,
+            level=Qgis.MessageLevel.Info,
+            duration=3,
         )
 
     # ------------------------------------------------------------- Settings
@@ -295,7 +310,8 @@ class LayerCrsDisplayPlugin:
 
     def _enable_embedded_widgets_flag(self):
         model = self.iface.layerTreeView().layerTreeModel()
-        model.setFlag(QgsLayerTreeModel.UseEmbeddedWidgets, True)
+        flag_enum = getattr(QgsLayerTreeModel, "Flag", QgsLayerTreeModel)
+        model.setFlag(getattr(flag_enum, "UseEmbeddedWidgets"), True)
 
     # --------------------------------------------------------------- Signals
     def _connect_project_signals(self):

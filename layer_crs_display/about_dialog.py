@@ -64,7 +64,7 @@ EMAIL_URL = "mailto:reynolds.mach88@gmail.com"
 def _plain_label(text, object_name=""):
     widget = QLabel(text)
     widget.setWordWrap(True)
-    widget.setTextFormat(Qt.PlainText)
+    widget.setTextFormat(Qt.TextFormat.PlainText)
     if object_name:
         widget.setObjectName(object_name)
     return widget
@@ -82,7 +82,7 @@ class AboutDialog(QDialog):
         self.setWindowIcon(
             QIcon(str(Path(__file__).with_name("plugin_061.svg")))
         )
-        self.setLayoutDirection(Qt.LeftToRight)
+        self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         self.setMinimumWidth(560)
         self.setStyleSheet(
             """
@@ -131,14 +131,14 @@ class AboutDialog(QDialog):
                 52, 52
             )
         )
-        header.addWidget(icon, 0, Qt.AlignTop)
+        header.addWidget(icon, 0, Qt.AlignmentFlag.AlignTop)
 
         heading = QVBoxLayout()
         heading.setSpacing(2)
         heading.addWidget(_plain_label("Layer CRS Display", "aboutTitle"))
         heading.addWidget(
             _plain_label(
-                "Version {}  |  QGIS 3".format(version), "aboutVersion"
+                "Version {}  |  QGIS 3 / 4".format(version), "aboutVersion"
             )
         )
         heading.addWidget(
@@ -194,7 +194,9 @@ class AboutDialog(QDialog):
         )
         root.addWidget(note)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.Close, parent=self)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Close, parent=self
+        )
         buttons.rejected.connect(self.reject)
         root.addWidget(buttons)
 
@@ -212,7 +214,7 @@ class AboutDialog(QDialog):
         button = QPushButton(caption)
         button.setObjectName(object_name)
         button.setToolTip(url)
-        button.setCursor(Qt.PointingHandCursor)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.setMinimumHeight(34)
         button.setAutoDefault(False)
         if icon_name:

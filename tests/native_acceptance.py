@@ -6,7 +6,7 @@ import hashlib
 import sqlite3
 import tempfile
 from pathlib import Path
-from qgis.PyQt.QtCore import QEventLoop, QTimer, QVariant
+from qgis.PyQt.QtCore import QEventLoop, QMetaType, QTimer
 from qgis.core import (QgsApplication, QgsProject, QgsVectorLayer, QgsRasterLayer,
     QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsCoordinateReferenceSystem)
 from osgeo import gdal, osr
@@ -21,7 +21,9 @@ with tempfile.TemporaryDirectory(prefix='crs_native_test_') as folder:
     # Use an independent project so the user's layers are untouched.
     project=QgsProject()
     vector=QgsVectorLayer('Point?crs=EPSG:4326','نقطه آزمون','memory')
-    vector.dataProvider().addAttributes([QgsField('label',QVariant.String)])
+    vector.dataProvider().addAttributes(
+        [QgsField('label', QMetaType.Type.QString)]
+    )
     vector.updateFields()
     f=QgsFeature(vector.fields());f.setAttributes(['آزمون فارسی'])
     f.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(51,0)))
@@ -38,7 +40,9 @@ with tempfile.TemporaryDirectory(prefix='crs_native_test_') as folder:
     raster=QgsRasterLayer(str(src),'classes','gdal');assert raster.isValid();project.addMapLayer(raster)
     target=QgsCoordinateReferenceSystem('EPSG:32639')
     second=QgsVectorLayer('Point?crs=EPSG:4326','second','memory')
-    second.dataProvider().addAttributes([QgsField('label',QVariant.String)])
+    second.dataProvider().addAttributes(
+        [QgsField('label', QMetaType.Type.QString)]
+    )
     second.updateFields()
     f2=QgsFeature(second.fields());f2.setAttributes(['second point'])
     f2.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(51.001,0)))
@@ -55,10 +59,10 @@ with tempfile.TemporaryDirectory(prefix='crs_native_test_') as folder:
     runner=BatchRunner(project);loop=QEventLoop();completed=[]
     runner.finished.connect(lambda rows,report:(completed.extend(rows),loop.quit()))
     timer=QTimer();timer.setSingleShot(True);timer.timeout.connect(lambda:(runner.cancel(),loop.quit()))
-    timer.start(60000);runner.start(plans,target,add_layers=False);loop.exec_();timer.stop()
+    timer.start(60000);runner.start(plans,target,add_layers=False);loop.exec();timer.stop()
     # Do not free context while a timed-out task is still running.
     if runner.active:
-        runner.finished.connect(lambda *args:loop.quit());loop.exec_()
+        runner.finished.connect(lambda *args:loop.quit());loop.exec()
         raise AssertionError('Native test timed out')
     assert [r['status'] for r in completed]==['success','success','skipped','success'],completed
     assert list(folder.glob('*.gpkg')) == [folder/'reprojected.gpkg']

@@ -1,6 +1,6 @@
-# Layer CRS Display — 0.6.1
+# Layer CRS Display — 0.7.1
 
-Maintainer: GeoForge Studio | QGIS 3.22–3.x (declared range; native validation pending)
+Maintainer: GeoForge Studio | QGIS 3.22–4.x (declared range; tested by the maintainer in QGIS 3 and QGIS 4)
 
 The CRS toolbar has two compact, boxed, icon-only buttons ordered left to right.
 Their full labels remain available in tooltips and the Plugins menu:
@@ -14,7 +14,7 @@ All plugin interface text, tooltips, messages and documentation are in English. 
 
 ## Quick start
 
-1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.6.1.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
+1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.7.1.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
 2. Click **Reproject**. The target CRS initially follows the project CRS and can be changed.
 3. Choose one output folder, a GeoPackage filename (default `reprojected.gpkg`) and a layer name suffix, such as `_UTM39`. `Roads` becomes `Roads_UTM39`. No numbering or prefix is automatically added.
 4. Eligible layers with a different CRS are initially selected. Use **Use panel selection** to use the Layers panel selection, or change checkboxes individually.
@@ -68,7 +68,7 @@ Run from the repository root:
 ```bash
 python -m unittest discover -s tests -p 'test_*.py' -v
 python -m compileall -q layer_crs_display tests tools
-# Optional UI/batch lifecycle tests; PyQt5 is a test-only dependency:
+# Optional UI/batch lifecycle tests; PyQt6 or PyQt5 is test-only:
 QT_QPA_PLATFORM=offscreen python tests/qt_batch_acceptance.py
 # Build a local testing ZIP (does not require a public contact email):
 python tools/build_zip.py
@@ -80,21 +80,22 @@ three dialog sizes, selection/search, success/failure, CRS/count validation,
 cancellation, shared-package failures, same-CRS exclusion and preservation of existing outputs. These tests do **not** prove
 that QGIS/GDAL performs reprojection correctly.
 
-Development tests stay in the source repository and are excluded from the installation ZIP. Download the repository for the installed version, then run `tests/native_acceptance.py` inside the Python Console of an actual QGIS 3
-installation with this plugin installed and Processing/GDAL enabled. It generates
+Development tests stay in the source repository and are excluded from the installation ZIP. Download the repository for the installed version, then run `tests/native_acceptance.py` independently inside the Python Console of actual QGIS 3 and QGIS 4 installations with this plugin installed and Processing/GDAL enabled. It generates
 small temporary vector/raster fixtures and checks transformed coordinates,
 attributes, categorical values, NoData and source preservation. See
-[testing instructions](docs/TESTING.md). Native testing is still pending; do not
-claim compatibility with a QGIS version until it has been tested.
+[testing instructions](docs/TESTING.md). The maintainer confirmed that the 0.7.0
+candidate works in both QGIS 3 and QGIS 4. Exact QGIS, Qt, GDAL, OS and full
+acceptance-suite results should still be recorded rather than inferred for every
+version and platform.
 
 ## Publication status
 
 Version 0.5.4 is available through the official QGIS Plugins Repository as an
-experimental release. Version 0.6.1 is an experimental update candidate.
+experimental release. Version 0.7.1 is the stable dual-QGIS submission package.
 Source code and support are hosted at
 [geoforge-studio/layer-crs-display](https://github.com/geoforge-studio/layer-crs-display).
-The public contact email is `reynolds.mach88@gmail.com`. Native QGIS acceptance
-is still pending; see the [publication checklist](docs/PUBLISHING.md).
+The public contact email is `reynolds.mach88@gmail.com`. Maintainer testing has
+passed in QGIS 3 and QGIS 4; see the [publication checklist](docs/PUBLISHING.md).
 
 Build the installation archive from this source:
 
