@@ -1,4 +1,4 @@
-# Layer CRS Display — 0.8.1
+# Layer CRS Display — 0.8.2
 
 Maintainer: GeoForge Studio | QGIS 3.22–4.x (declared range; tested by the maintainer in QGIS 3 and QGIS 4)
 
@@ -17,7 +17,7 @@ All plugin interface text, tooltips, messages and documentation are in English. 
 
 ## Quick start
 
-1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.8.1.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
+1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.8.2.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
 2. Click **CRS Audit** to review the project. Filter the table or select
    `Different` layers and click **Send to Reproject**. You can also open
    **Reproject** directly.
@@ -106,14 +106,14 @@ small temporary vector/raster fixtures and checks transformed coordinates,
 attributes, categorical values, NoData and source preservation. See
 [testing instructions](docs/TESTING.md). The maintainer confirmed that the 0.7.0
 candidate works in both QGIS 3 and QGIS 4 and completed a functional smoke test
-of 0.8.1. Exact QGIS, Qt, GDAL, OS and full
+of 0.8.2. Exact QGIS, Qt, GDAL, OS and full
 acceptance-suite results should still be recorded rather than inferred for every
 version and platform.
 
 ## Publication status
 
 Version 0.5.4 is available through the official QGIS Plugins Repository as an
-experimental release. Version 0.8.1 is the stable CRS Audit release, built on
+experimental release. Version 0.8.2 is the stable CRS Audit release, built on
 the dual-QGIS 0.7.1 codebase. Its metadata is set to `experimental=False`.
 Source code and support are hosted at
 [geoforge-studio/layer-crs-display](https://github.com/geoforge-studio/layer-crs-display).

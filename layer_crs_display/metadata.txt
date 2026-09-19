@@ -3,7 +3,7 @@ name=Layer CRS Display
 qgisMinimumVersion=3.22
 qgisMaximumVersion=4.99
 description=Displays layer CRS, audits a project's CRS consistency, and batch reprojects selected vector and raster layers.
-version=0.8.1
+version=0.8.2
 author=GeoForge Studio
 email=reynolds.mach88@gmail.com
 about=Displays layer CRS without renaming original layers. The read-only project audit identifies matching, different and missing CRS definitions and can send selected mismatches to the existing batch reprojection workflow. Batch reprojection saves selected vectors to GeoPackage and GDAL rasters to GeoTIFF. Requires Processing and its GDAL provider for rasters. Supports QGIS 3 and QGIS 4.
@@ -11,7 +11,7 @@ homepage=https://github.com/geoforge-studio/layer-crs-display#readme
 repository=https://github.com/geoforge-studio/layer-crs-display
 tracker=https://github.com/geoforge-studio/layer-crs-display/issues
 license=GPL-2.0-or-later
-changelog=0.8.1: Add a selectable reference CRS to Audit, pass it to Reproject, keep staging outside the chosen output folder and leave only final data outputs there.
+changelog=0.8.2: Publish the corrected stable package with experimental=False, selectable Audit reference CRS and final-only vector output folders.
 category=Vector
 tags=crs,epsg,coordinate reference system,audit,layer tree,projection
 icon=plugin_061.svg

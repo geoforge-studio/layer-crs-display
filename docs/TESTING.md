@@ -66,8 +66,8 @@ default rules without suppressions. Development tests remain available under
 ## Current status
 
 The maintainer reported successful functional checks of the 0.7.0 candidate in
-both QGIS 3 and QGIS 4 and a successful functional smoke test of 0.8.1. Version
-0.8.1 is marked stable by maintainer decision. Exact QGIS, Qt, Python, GDAL and
+both QGIS 3 and QGIS 4 and a successful functional smoke test of 0.8.2. Version
+0.8.2 is marked stable by maintainer decision. Exact QGIS, Qt, Python, GDAL and
 OS versions and the complete native acceptance output have not yet been
 recorded. The declared 3.22–4.x metadata range is a compatibility range, not a
 claim that every release and platform combination was tested.
