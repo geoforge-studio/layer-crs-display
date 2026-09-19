@@ -7,8 +7,9 @@ Their full labels remain available in tooltips and the Plugins menu:
 
 - **Display CRS** (layers and eye): show or hide CRS information in the Layers
   panel. The icon and button border change between inactive and active states.
-- **CRS Audit** (checklist and magnifier): scan the current project on demand,
-  classify layers as OK, Different or Missing, and inspect CRS details.
+- **CRS Audit** (checklist and magnifier): choose a reference CRS, scan the
+  current project on demand, classify layers as OK, Different or Missing, and
+  inspect CRS details.
 - **Reproject** (geographic grid, planar grid and arrow): open the batch
   reprojection dialog.
 
@@ -34,17 +35,19 @@ Search filters the visible list without changing selection. The summary explicit
 
 ## CRS Audit
 
-Audit runs only when its window opens or **Refresh** is clicked. It does not
-monitor the project in the background and never assigns or changes a CRS. `OK`
-means the layer CRS is valid and equivalent to the project CRS; `Different`
-means it is valid but differs from the project CRS; `Missing` means no valid
-source CRS is defined. Equivalence uses the same complete CRS comparison as
-Batch Reprojection rather than display-text equality.
+Audit runs only when its window opens, the reference CRS changes or **Refresh**
+is clicked. The reference initially follows the project CRS but can be changed
+inside Audit. The scan does not monitor the project in the background and never
+assigns or changes a CRS. `OK` means the layer CRS is valid and equivalent to
+the selected reference; `Different` means it is valid but differs from that
+reference; `Missing` means no valid source CRS is defined. Equivalence uses the
+same complete CRS comparison as Batch Reprojection rather than display-text
+equality.
 
 The table shows CRS label, type, datum and unit. Filters change visibility only.
 **Select Different** selects all mismatches, and **Send to Reproject** opens the
-existing Batch window with eligible selected layers checked and the project CRS
-as target. Missing CRS is never guessed or sent for conversion.
+existing Batch window with eligible selected layers checked and the reference
+CRS as target. Missing CRS is never guessed or sent for conversion.
 
 ## Outputs and scope
 
@@ -52,7 +55,7 @@ as target. Missing CRS is never guessed or sent for conversion.
 - Coordinates are reprojected, rather than merely assigning a different CRS label.
 - Source data, coordinates and layer names are retained. Adding outputs, hiding source layers and changing the project CRS are separate options.
 - Existing files are not overwritten. If selected layers have duplicate output names, run one separately with another suffix. The displayed name is exactly the original name plus suffix; invalid filesystem characters are replaced with `_` in the physical raster filename or GeoPackage table name. Reserved GeoPackage table prefixes are escaped with `_`. The shared GeoPackage filename can be changed independently of the layer suffix.
-- All features matching the current layer filter are exported. Selecting individual features does not restrict the export. The source filter is recorded in the report. GeoPackage internal feature IDs may be regenerated; use an attribute field for stable business identifiers.
+- All features matching the current layer filter are exported. Selecting individual features does not restrict the export. GeoPackage internal feature IDs may be regenerated; use an attribute field for stable business identifiers.
 - Attribute field names and values are transferred by the reprojection algorithm. A reported transformation error or a feature-count mismatch prevents publication of that layer's output. Styles are copied where possible; project forms, relationships and other dependencies are not fully migrated.
 
 ## Rasters and performance
@@ -61,7 +64,7 @@ Nearest neighbour is the default for categorical values. Choose bilinear or cubi
 
 GDAL calculates output cell size and extent. Input data type and source NoData are inherited through the algorithm. Matching CRS does not guarantee matching resolution, extent or grid alignment. TIFF outputs are tiled and uncompressed, with BigTIFF enabled when needed; output files can be large.
 
-Layers run sequentially as background tasks; validated vector outputs are then combined by `native:package` in another background task. Temporary vector data is removed after completion. Processing is sequential to limit simultaneous memory and disk use. Raster Warp enables overlapping I/O and processing and uses up to four computation threads. Actual speed depends on data volume, drivers, storage and transformation; no benchmark or time guarantee is claimed.
+Layers run sequentially as background tasks; validated vector outputs are then combined by `native:package` in another background task. Intermediate data is created in the operating-system temporary area, not the selected output folder, and cleanup is retried when Windows delays releasing provider locks. Processing is sequential to limit simultaneous memory and disk use. Raster Warp enables overlapping I/O and processing and uses up to four computation threads. Actual speed depends on data volume, drivers, storage and transformation; no benchmark or time guarantee is claimed.
 
 ## Requirements and exclusions
 
@@ -72,9 +75,9 @@ Layers run sequentially as background tasks; validated vector outputs are then c
 - Processing must be enabled; raster conversion also requires its GDAL provider. No additional pip dependencies are required.
 - Transformations needing datum grids require the appropriate grids and coordinate operation in QGIS. The plugin does not download them or verify that the assigned source CRS is correct.
 
-## Cancellation and reporting
+## Cancellation and results
 
-**Stop** cancels the current operation and remaining queue. Already saved rasters are retained. Converted vectors are staged and saved together only when packaging succeeds; stopping before that point discards the unsaved vector outputs. A failed or cancelled package is never exposed under the final filename. The dialog cannot close until cancellation completes. Failure of one layer does not stop subsequent layers. A JSON report in the output folder records source and target CRS, names, filters, statuses and errors.
+**Stop** cancels the current operation and remaining queue. Already saved rasters are retained. Converted vectors are staged and saved together only when packaging succeeds; stopping before that point discards the unsaved vector outputs. A failed or cancelled package is never exposed under the final filename. The dialog cannot close until cancellation completes. Failure of one layer does not stop subsequent layers. Results and errors remain visible in the dialog; the plugin does not add a JSON report to the output folder. Consequently, a vector-only batch targeting an initially empty folder leaves exactly one GeoPackage.
 
 ## Development and validation
 
@@ -135,9 +138,8 @@ This project is distributed under **GNU GPL version 2 or any later version**
 
 Use the repository's Issues tab to report problems. Include QGIS/OS/Python
 versions, layer/provider type, source and target CRS, the error message and a
-minimal non-sensitive example. Do not post private datasets. JSON batch reports
-contain layer names, file paths and subset filters; redact sensitive content before
-sharing a report.
+minimal non-sensitive example. Do not post private datasets or screenshots that
+contain sensitive layer names or paths.
 
 ## GeoForge Studio
 

@@ -1,13 +1,51 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Portable naming and output planning. No GIS objects or data edits."""
 from collections import Counter
+import errno
+import os
 from pathlib import Path
 import re
+import shutil
+import tempfile
 import unicodedata
 
 INVALID = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 RESERVED = re.compile(r'^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)', re.I)
 SIDECARS = ('.aux.xml', '.ovr', '.msk', '-wal', '-shm', '-journal')
+
+
+def publish_file(source, final):
+    """Publish a staged file without overwriting an existing destination."""
+    source = Path(source)
+    final = Path(final)
+    fd = os.open(str(final), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
+    os.close(fd)
+    transfer = None
+    try:
+        try:
+            os.replace(str(source), str(final))
+        except OSError as exc:
+            if exc.errno != errno.EXDEV:
+                raise
+            fd, transfer_name = tempfile.mkstemp(
+                prefix="." + final.name + ".",
+                suffix=".part",
+                dir=str(final.parent),
+            )
+            os.close(fd)
+            transfer = Path(transfer_name)
+            shutil.copy2(str(source), str(transfer))
+            os.replace(str(transfer), str(final))
+            try:
+                source.unlink()
+            except OSError:
+                # The private stage cleanup retries delayed provider locks.
+                pass
+    except Exception:
+        final.unlink(missing_ok=True)
+        if transfer is not None:
+            transfer.unlink(missing_ok=True)
+        raise
 
 
 def output_names(layer_name, suffix, kind):

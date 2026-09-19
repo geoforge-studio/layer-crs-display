@@ -38,8 +38,8 @@ GitHub/GitLab/Google sign-in as well; OSGeo registration is not the only login r
 ## Privacy when publishing
 
 Use the selected public brand name and the intended commit email. Do not publish
-private datasets or unredacted batch reports. Reports contain paths, layer names
-and subset filters. Changing a profile does not rewrite old Git author details.
+private datasets or screenshots containing sensitive paths and layer names.
+Changing a profile does not rewrite old Git author details.
 
 ## Official references
 

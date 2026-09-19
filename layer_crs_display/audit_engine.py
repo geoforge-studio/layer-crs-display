@@ -78,12 +78,12 @@ def crs_key(crs):
     return str(crs.authid() or crs.toWkt()).strip()
 
 
-def audit_layer(layer, project_crs):
+def audit_layer(layer, reference_crs):
     """Return a display record for one layer without mutating it."""
     crs = layer.crs()
     valid = bool(crs.isValid())
     equivalent = bool(
-        valid and project_crs.isValid() and same_crs(crs, project_crs)
+        valid and reference_crs.isValid() and same_crs(crs, reference_crs)
     )
     return {
         "layer_id": layer.id(),
@@ -97,7 +97,7 @@ def audit_layer(layer, project_crs):
     }
 
 
-def scan_project(project):
+def scan_project(project, reference_crs):
     """Scan layers once in layer-tree order and return audit records."""
     rows = []
     seen = set()
@@ -105,6 +105,6 @@ def scan_project(project):
         layer = node.layer()
         if layer is None or layer.id() in seen:
             continue
-        rows.append(audit_layer(layer, project.crs()))
+        rows.append(audit_layer(layer, reference_crs))
         seen.add(layer.id())
     return rows

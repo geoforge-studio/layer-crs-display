@@ -24,12 +24,12 @@ These tests use simulated GIS objects; they are not native reprojection tests.
    **Reproject** buttons in that order.
    Toggle the display, change settings, unload/reload, and open an older project
    to check that it has one CRS widget per layer and unrelated widgets are kept.
-4. Open **CRS Audit** in a mixed vector/raster project. Verify `OK`, `Different`
-   and `Missing` classifications, the summary and every filter. Confirm Refresh
-   reflects current state without changing any layer or project CRS. Select
-   `Different` rows, send them to Reproject, and confirm only eligible selected
-   layers are checked with the project CRS as target. Confirm Missing layers are
-   never transferred.
+4. Open **CRS Audit** in a mixed vector/raster project. Change the Reference CRS
+   and verify `OK`, `Different` and `Missing` classifications, the summary and
+   every filter update against that reference. Confirm Refresh does not change
+   any layer or project CRS. Select `Different` rows, send them to Reproject,
+   and confirm only eligible selected layers are checked with the same reference
+   CRS as target. Confirm Missing layers are never transferred.
 
 5. Download the source repository for the installed version and extract it.
    Development tests are kept in the repository and are not installed with the
@@ -49,7 +49,7 @@ checks two named vector layers in one GeoPackage, excludes an already matching C
 Do not close QGIS while it is running. If a provider hangs, cancellation may take
 time; the test waits for the task to finish before freeing its context.
 
-6. Run a batch containing two vector layers needing conversion and one already in the target CRS. Confirm that exactly one GeoPackage contains only the two converted layers and that both load using their own layer names. Repeat with a custom GeoPackage filename and with raster inputs (GeoTIFF). Run small real vector and raster batches through the dialog. Test an existing
+6. Run a batch containing two vector layers needing conversion and one already in the target CRS. In an initially empty output folder, confirm that exactly one file—the GeoPackage—contains only the two converted layers, that both load using their own layer names, and that no `crs_stage_*` folder or JSON report is created. Repeat with a custom GeoPackage filename and with raster inputs (GeoTIFF). Run small real vector and raster batches through the dialog. Test an existing
    output conflict, cancellation, filtered input, custom suffix, missing source
    CRS and a transformation requiring a locally installed datum grid.
 7. Repeat the complete test independently in QGIS 3 and QGIS 4. Record QGIS, Qt,

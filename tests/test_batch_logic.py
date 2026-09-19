@@ -1,10 +1,63 @@
 import tempfile
 import unittest
+from unittest import mock
+import errno
+import os
 from pathlib import Path
-from layer_crs_display.batch_logic import output_names, plan_outputs, geopackage_filename
+from layer_crs_display.batch_logic import (
+    geopackage_filename,
+    output_names,
+    plan_outputs,
+    publish_file,
+)
 
 
 class NamingTests(unittest.TestCase):
+    def test_staged_file_is_published_as_the_only_final_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            folder = Path(folder)
+            source = folder / 'stage.tmp'
+            final = folder / 'result.gpkg'
+            source.write_bytes(b'data')
+            publish_file(source, final)
+            self.assertEqual(set(folder.iterdir()), {final})
+            self.assertEqual(final.read_bytes(), b'data')
+
+    def test_publication_never_overwrites_an_existing_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            folder = Path(folder)
+            source = folder / 'stage.tmp'
+            final = folder / 'result.gpkg'
+            source.write_bytes(b'new')
+            final.write_bytes(b'keep')
+            with self.assertRaises(FileExistsError):
+                publish_file(source, final)
+            self.assertEqual(final.read_bytes(), b'keep')
+            self.assertEqual(source.read_bytes(), b'new')
+
+    def test_cross_device_publication_uses_a_sibling_transfer_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            folder = Path(folder)
+            source = folder / 'stage.tmp'
+            final = folder / 'result.gpkg'
+            source.write_bytes(b'data')
+            real_replace = os.replace
+            calls = []
+
+            def replace(source_path, destination_path):
+                calls.append((source_path, destination_path))
+                if len(calls) == 1:
+                    raise OSError(errno.EXDEV, 'cross-device link')
+                return real_replace(source_path, destination_path)
+
+            with mock.patch(
+                'layer_crs_display.batch_logic.os.replace',
+                side_effect=replace,
+            ):
+                publish_file(source, final)
+            self.assertEqual(set(folder.iterdir()), {final})
+            self.assertEqual(final.read_bytes(), b'data')
+
     def test_persian_name_is_preserved_and_only_suffix_added(self):
         self.assertEqual(output_names('راه‌های استان', '_UTM39', 'vector'), ('راه‌های استان_UTM39', 'راه‌های استان_UTM39.gpkg'))
 

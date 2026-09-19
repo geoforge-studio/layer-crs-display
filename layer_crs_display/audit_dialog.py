@@ -21,7 +21,8 @@ from qgis.PyQt.QtWidgets import (
     QTableWidgetSelectionRange,
     QVBoxLayout,
 )
-from qgis.core import QgsProject
+from qgis.core import QgsCoordinateReferenceSystem, QgsProject
+from qgis.gui import QgsProjectionSelectionWidget
 
 from .audit_engine import scan_project
 from .audit_logic import (
@@ -56,6 +57,7 @@ class AuditDialog(QDialog):
         self.project = QgsProject.instance()
         self.rows = []
         self.requested_layer_ids = []
+        self.requested_target_crs = None
         self.setObjectName("CrsAudit")
         self.setWindowTitle("CRS — Project Audit")
         self.setWindowIcon(
@@ -111,7 +113,7 @@ class AuditDialog(QDialog):
         title.setObjectName("heading")
         titles.addWidget(title)
         subtitle = label(
-            "Review layer CRS definitions against the current project CRS. "
+            "Compare layer CRS definitions with a reference CRS. "
             "This scan never changes project data or CRS assignments."
         )
         subtitle.setObjectName("muted")
@@ -124,6 +126,16 @@ class AuditDialog(QDialog):
         card_layout = QVBoxLayout(card)
         card_layout.setContentsMargins(12, 10, 12, 12)
         card_layout.setSpacing(8)
+
+        reference_row = QHBoxLayout()
+        reference_row.addWidget(label("Reference CRS"))
+        self.reference_crs = QgsProjectionSelectionWidget()
+        self.reference_crs.setCrs(self.project.crs())
+        self.reference_crs.setToolTip(
+            "All OK and Different results are evaluated against this CRS."
+        )
+        reference_row.addWidget(self.reference_crs, 1)
+        card_layout.addLayout(reference_row)
 
         self.summary = label("")
         self.summary.setObjectName("summary")
@@ -187,11 +199,13 @@ class AuditDialog(QDialog):
         self.send_button.clicked.connect(self.send_to_reproject)
         footer.addWidget(self.send_button)
         outer.addLayout(footer)
+        self.reference_crs.crsChanged.connect(self.refresh)
         self.refresh()
 
-    def refresh(self):
+    def refresh(self, *args):
         selected_ids = set(self.selected_layer_ids())
-        self.rows = scan_project(self.project)
+        reference = self.reference_crs.crs()
+        self.rows = scan_project(self.project, reference)
         self.table.clearSelection()
         self.table.setRowCount(len(self.rows))
         for row_index, row in enumerate(self.rows):
@@ -227,15 +241,28 @@ class AuditDialog(QDialog):
         counts = audit_summary(self.rows)
         self.summary.setText(
             "{layers} layers  •  {crs} CRS  •  {missing} Missing CRS  •  "
-            "{different} Different from Project  •  Project: {project}".format(
-                project=self.project.crs().authid()
-                or self.project.crs().description()
+            "{different} Different from Reference  •  Reference: "
+            "{reference}".format(
+                reference=reference.authid()
+                or reference.description()
                 or "Not defined",
                 **counts,
             )
         )
         self.apply_filter()
-        self.send_button.setEnabled(bool(counts["different"]))
+        self.send_button.setEnabled(
+            reference.isValid() and bool(counts["different"])
+        )
+        if not reference.isValid():
+            self.guidance.setText(
+                "Choose a valid Reference CRS before sending layers to "
+                "Reproject. Missing source CRS must still be assigned first."
+            )
+        else:
+            self.guidance.setText(
+                "Missing CRS cannot be reprojected. Assign the correct source "
+                "CRS first, then refresh the audit."
+            )
 
     def apply_filter(self, *args):
         selected = self.status_filter.currentData()
@@ -274,4 +301,7 @@ class AuditDialog(QDialog):
                 "Select at least one layer with Different status.",
             )
             return
+        self.requested_target_crs = QgsCoordinateReferenceSystem(
+            self.reference_crs.crs()
+        )
         self.accept()

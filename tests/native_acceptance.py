@@ -66,6 +66,8 @@ with tempfile.TemporaryDirectory(prefix='crs_native_test_') as folder:
         raise AssertionError('Native test timed out')
     assert [r['status'] for r in completed]==['success','success','skipped','success'],completed
     assert list(folder.glob('*.gpkg')) == [folder/'reprojected.gpkg']
+    assert not list(folder.glob('crs_stage_*'))
+    assert not list(folder.glob('crs_batch_*.json'))
     with sqlite3.connect(str(folder/'reprojected.gpkg')) as conn:
         tables={r[0] for r in conn.execute("SELECT table_name FROM gpkg_contents WHERE data_type='features'")}
     conn.close()

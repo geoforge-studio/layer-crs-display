@@ -248,12 +248,13 @@ class LayerCrsDisplayPlugin:
         self._audit_dialog = AuditDialog(self.iface.mainWindow())
         result = self._audit_dialog.exec()
         requested = list(self._audit_dialog.requested_layer_ids)
+        target_crs = self._audit_dialog.requested_target_crs
         self._audit_dialog.deleteLater()
         self._audit_dialog = None
         if result == QDialog.DialogCode.Accepted and requested:
-            self.show_batch(requested)
+            self.show_batch(requested, target_crs)
 
-    def show_batch(self, layer_ids=None):
+    def show_batch(self, layer_ids=None, target_crs=None):
         from .batch_dialog import BatchDialog
         if isinstance(layer_ids, bool):
             layer_ids = None
@@ -264,7 +265,9 @@ class LayerCrsDisplayPlugin:
         elif not self._batch_dialog.runner.active:
             self._batch_dialog.refresh()
         if layer_ids and not self._batch_dialog.runner.active:
-            self._batch_dialog.prepare_layer_selection(layer_ids)
+            self._batch_dialog.prepare_layer_selection(
+                layer_ids, target_crs
+            )
         self._batch_dialog.exec()
 
     def show_settings(self):

@@ -388,13 +388,15 @@ class BatchDialog(QDialog):
         self.preview()
         self.filter_rows()
 
-    def prepare_layer_selection(self, layer_ids):
-        """Use the project CRS and preselect eligible layers from CRS Audit."""
+    def prepare_layer_selection(self, layer_ids, target_crs=None):
+        """Use the Audit reference CRS and preselect eligible layers."""
         if self.runner.active:
             return
         requested = set(layer_ids)
         self.target.blockSignals(True)
-        self.target.setCrs(self.project.crs())
+        self.target.setCrs(
+            target_crs if target_crs is not None else self.project.crs()
+        )
         self.target.blockSignals(False)
         if self.auto_suffix:
             authid = self.target.crs().authid().replace(':', '')
@@ -517,7 +519,11 @@ class BatchDialog(QDialog):
         self.busy(False)
         counts = {key:sum(r['status']==key for r in results) for key in ('success','failed','cancelled','skipped')}
         self.footer_status.setText('{success} succeeded • {failed} failed • {cancelled} cancelled • {skipped} skipped'.format(**counts))
-        self.status.setText('Succeeded: {success} | Failed: {failed} | Cancelled: {cancelled} | Skipped: {skipped}\nReport: '.format(**counts)+report+'\nClick Refresh before starting another batch.')
+        self.status.setText(
+            'Succeeded: {success} | Failed: {failed} | '
+            'Cancelled: {cancelled} | Skipped: {skipped}\n'
+            'Click Refresh before starting another batch.'.format(**counts)
+        )
         self.run_button.setEnabled(False)
 
     def reject(self):
