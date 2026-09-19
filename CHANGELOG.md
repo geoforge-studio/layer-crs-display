@@ -1,3 +1,25 @@
+# 0.8.1 — stable CRS Audit release
+
+- Provide a selectable reference CRS, initially set to the project CRS, and
+  classify each layer as `OK`, `Different` or `Missing` against that reference.
+- Send selected `Different` layers and the chosen reference CRS to the existing
+  Batch Reprojection window; never reproject a missing source CRS.
+- Create intermediate data in the operating-system temporary area, retry
+  cleanup after delayed Windows provider locks and keep staging folders out of
+  the user-selected output directory.
+- Stop writing an automatic JSON sidecar report so a vector-only batch leaves
+  exactly one final GeoPackage in an initially empty output directory.
+- Mark the release stable after the maintainer's functional smoke test.
+
+# 0.8.0 — initial CRS Audit candidate
+
+- Add an on-demand, read-only project audit between Display CRS and Reproject.
+- Classify layers as `OK`, `Different` or `Missing` against the project CRS.
+- Show EPSG/custom CRS label, CRS type, datum and unit with status filtering.
+- Summarize layer, distinct CRS, missing and different counts.
+- Send selected `Different` layers to the existing Batch Reprojection window.
+- Keep Audit free of background monitoring and data or CRS mutations.
+
 # 0.7.1 — stable dual-QGIS release
 
 - Promote the QGIS 3/Qt5 and QGIS 4/Qt6 compatible 0.7.0 candidate to stable

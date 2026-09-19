@@ -1,18 +1,16 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Sequential Processing tasks with main-thread completion and staged outputs."""
-import json
+"""Sequential Processing tasks with private staging and final-only outputs."""
 import math
 import os
 import shutil
 import tempfile
-from datetime import datetime
 from pathlib import Path
 
 from qgis.PyQt.QtCore import QObject, pyqtSignal, QTimer
 from qgis.core import (Qgis, QgsApplication, QgsCoordinateReferenceSystem, QgsProcessingAlgRunnerTask,
     QgsProcessingContext, QgsProcessingFeedback, QgsFeatureRequest, QgsVectorLayer,
     QgsRasterLayer, QgsMapLayerStyle)
-from .batch_logic import SIDECARS
+from .batch_logic import SIDECARS, publish_file
 
 
 _invalid_geometry_enum = getattr(Qgis, 'InvalidGeometryCheck', None)
@@ -124,7 +122,6 @@ class BatchRunner(QObject):
         self.package_stage = None
         self.packaging = False
         self.has_vectors = bool(vectors)
-        self.started = datetime.now().astimezone().isoformat()
         QTimer.singleShot(0, self._next)
 
     def cancel(self):
@@ -165,7 +162,9 @@ class BatchRunner(QObject):
             path = Path(self.current['output_path'])
             if path.exists():
                 raise ValueError('The output file already exists. Existing files will not be overwritten.')
-            self.stage = Path(tempfile.mkdtemp(prefix='crs_stage_', dir=str(path.parent)))
+            self.stage = Path(
+                tempfile.mkdtemp(prefix='geoforge_crs_stage_')
+            )
             self.staged_file = self.stage / path.name
             self.style = QgsMapLayerStyle()
             self.style.readFromLayer(layer)
@@ -248,13 +247,7 @@ class BatchRunner(QObject):
         if any(Path(str(final)+suffix).exists() for suffix in SIDECARS):
             raise ValueError('A sidecar file already exists in the destination. Output publication was stopped.')
         # Reserve the final pathname with O_EXCL: never overwrite an existing file.
-        fd = os.open(str(final), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
-        os.close(fd)
-        try:
-            os.replace(str(self.staged_file), str(final))
-        except Exception:
-            final.unlink()
-            raise
+        publish_file(self.staged_file, final)
         # Common raster sidecars, if the provider created them.
         warnings = []
         for suffix in ('.aux.xml', '.ovr', '.msk'):
@@ -303,7 +296,9 @@ class BatchRunner(QObject):
             final = Path(self.pending_vectors[0]['plan']['output_path'])
             if final.exists() or any(Path(str(final)+s).exists() for s in SIDECARS):
                 raise ValueError('The destination GeoPackage or a sidecar already exists.')
-            self.package_stage = Path(tempfile.mkdtemp(prefix='crs_stage_', dir=str(final.parent)))
+            self.package_stage = Path(
+                tempfile.mkdtemp(prefix='geoforge_crs_stage_')
+            )
             self.package_file = self.package_stage / final.name
             for entry in self.pending_vectors:
                 layer = QgsVectorLayer(str(entry['path']), entry['plan']['output_layer'], 'ogr')
@@ -354,13 +349,7 @@ class BatchRunner(QObject):
                     check = None
                 if any(Path(str(final)+s).exists() for s in SIDECARS):
                     raise ValueError('A destination sidecar appeared while processing. Nothing was overwritten.')
-                fd = os.open(str(final), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666)
-                os.close(fd)
-                try:
-                    os.replace(str(self.package_file), str(final))
-                except Exception:
-                    final.unlink()
-                    raise
+                publish_file(self.package_file, final)
                 for entry in self.pending_vectors:
                     plan = entry['plan']
                     plan['output_uri'] = str(final) + '|layername=' + plan['output_layer']
@@ -395,33 +384,46 @@ class BatchRunner(QObject):
             # Keep context/feedback alive through the task's finished callback.
             self._retired_tasks.append((self.task, self.context, self.feedback))
         if self.stage:
-            shutil.rmtree(str(self.stage), ignore_errors=True)
+            self._remove_stage(self.stage)
+            self.stage = None
         self.task = None
         self.feedback = None
         self.context = None
         self.current_layer = None
 
+    def _remove_stage(self, path, attempt=0):
+        """Remove a private stage, retrying delayed Windows file releases."""
+        if not path:
+            return
+        path = Path(path)
+        try:
+            shutil.rmtree(str(path))
+        except FileNotFoundError:
+            return
+        except OSError:
+            if attempt < 8:
+                QTimer.singleShot(
+                    250,
+                    lambda path=path, attempt=attempt + 1:
+                    self._remove_stage(path, attempt),
+                )
+
     def _finish(self):
         self.package_layers.clear()
+        stages = [entry['stage'] for entry in self.pending_vectors]
         for entry in self.pending_vectors:
-            shutil.rmtree(str(entry['stage']), ignore_errors=True)
+            entry['path'] = None
         self.pending_vectors.clear()
         if self.package_stage:
-            shutil.rmtree(str(self.package_stage), ignore_errors=True)
+            stages.append(self.package_stage)
             self.package_stage = None
+        self.package_file = None
+        self.staged_file = None
+        self._retired_tasks.clear()
+        for stage in stages:
+            self._remove_stage(stage)
         if self.set_project_crs and any(r['status'] == 'success' for r in self.results):
             self.project.setCrs(self.target)
-        folder = Path(self.plans[0]['output_path']).parent
-        report = folder / ('crs_batch_' + datetime.now().strftime('%Y%m%d_%H%M%S_%f') + '.json')
-        payload = dict(started=self.started, finished=datetime.now().astimezone().isoformat(),
-            target_crs=self.target.authid(), target_wkt=self.target.toWkt(), resampling=self.resampling,
-            cancelled=self.cancelled, results=self.results)
-        try:
-            with report.open('x', encoding='utf-8') as stream:
-                json.dump(payload, stream, ensure_ascii=False, indent=2)
-            report_text = str(report)
-        except Exception as exc:
-            report_text = 'Could not save the report: ' + str(exc)
         self.active = False
         self.progressChanged.emit(100)
-        self.finished.emit(self.results, report_text)
+        self.finished.emit(self.results, '')

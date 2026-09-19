@@ -154,7 +154,7 @@ app=QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 opened_urls = []
 about = AboutDialog(
-    '0.7.1',
+    '0.8.1',
     url_opener=lambda url: opened_urls.append(url.toString()),
 )
 about.show()
@@ -173,7 +173,7 @@ email_button = about.findChild(QtWidgets.QPushButton, 'emailLink')
 assert email_button is not None
 email_button.click()
 assert opened_urls[-1] == 'mailto:reynolds.mach88@gmail.com'
-assert about.findChild(QtWidgets.QLabel, 'aboutVersion').text() == 'Version 0.7.1  |  QGIS 3 / 4'
+assert about.findChild(QtWidgets.QLabel, 'aboutVersion').text() == 'Version 0.8.1  |  QGIS 3 / 4'
 about.close()
 
 assert same_crs(CRS('EPSG:32639'), CRS('EPSG:32639'))
@@ -345,6 +345,7 @@ with tempfile.TemporaryDirectory() as temp:
     wait(runner)
     assert runner.results[0]['status']=='success'
     assert (root/'out/reprojected.gpkg').exists()
+    assert set((root/'out').iterdir()) == {root/'out/reprojected.gpkg'}
     assert a.crs()==CRS('EPSG:4326') and a.name()=='roads'
     assert not project.nodes[a.id()].visible
     assert len(project.layers)==2
@@ -368,7 +369,7 @@ with tempfile.TemporaryDirectory() as temp:
     assert len([c for c in Task.calls[before_calls:] if c[0]=='native:reprojectlayer'])==2
     assert runner.results[0]['output_uri'].endswith('|layername=roads_39')
     assert len(runner.project.layers)==5
-    assert not list(out.glob('crs_stage_*'))
+    assert set(out.iterdir()) == {out/'reprojected.gpkg'}
 
     out=root/'all_same';out.mkdir();runner=BatchRunner(Project([same]));before_calls=len(Task.calls)
     runner.start(plans([same],out),CRS('EPSG:32639'));wait(runner)
@@ -382,7 +383,7 @@ with tempfile.TemporaryDirectory() as temp:
         assert [r['status'] for r in runner.results]==['failed','success'],runner.results
         assert not (out/(fault+'_39.gpkg')).exists()
         assert set(json.loads((out/'reprojected.gpkg').read_text())['layers'])=={'good_'+fault+'_39'}
-        assert not list(out.glob('crs_stage_*'))
+        assert set(out.iterdir()) == {out/'reprojected.gpkg'}
 
     # Immediate cancel and mid-task cancel do not publish final files.
     for midway in (False,True):

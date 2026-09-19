@@ -388,6 +388,35 @@ class BatchDialog(QDialog):
         self.preview()
         self.filter_rows()
 
+    def prepare_layer_selection(self, layer_ids, target_crs=None):
+        """Use the Audit reference CRS and preselect eligible layers."""
+        if self.runner.active:
+            return
+        requested = set(layer_ids)
+        self.target.blockSignals(True)
+        self.target.setCrs(
+            target_crs if target_crs is not None else self.project.crs()
+        )
+        self.target.blockSignals(False)
+        if self.auto_suffix:
+            authid = self.target.crs().authid().replace(':', '')
+            self.suffix.setText('_' + (authid or 'reprojected'))
+        self.manual_selection = False
+        self.refresh()
+        self.manual_selection = True
+        self.table.blockSignals(True)
+        for row, layer_id in enumerate(self.layer_ids):
+            item = self.table.item(row, 0)
+            eligible = bool(item.data(Qt.ItemDataRole.UserRole))
+            item.setCheckState(
+                Qt.CheckState.Checked
+                if eligible and layer_id in requested
+                else Qt.CheckState.Unchecked
+            )
+        self.table.blockSignals(False)
+        self.preview()
+        self.filter_rows()
+
     def selection_edited(self, item):
         if not self.refreshing and not self.runner.active and item.column()==0:
             self.manual_selection = True
@@ -490,7 +519,11 @@ class BatchDialog(QDialog):
         self.busy(False)
         counts = {key:sum(r['status']==key for r in results) for key in ('success','failed','cancelled','skipped')}
         self.footer_status.setText('{success} succeeded • {failed} failed • {cancelled} cancelled • {skipped} skipped'.format(**counts))
-        self.status.setText('Succeeded: {success} | Failed: {failed} | Cancelled: {cancelled} | Skipped: {skipped}\nReport: '.format(**counts)+report+'\nClick Refresh before starting another batch.')
+        self.status.setText(
+            'Succeeded: {success} | Failed: {failed} | '
+            'Cancelled: {cancelled} | Skipped: {skipped}\n'
+            'Click Refresh before starting another batch.'.format(**counts)
+        )
         self.run_button.setEnabled(False)
 
     def reject(self):

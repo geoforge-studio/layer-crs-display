@@ -23,7 +23,7 @@ from .settings_dialog import SettingsDialog
 
 
 PLUGIN_NAME = "Layer CRS Display"
-PLUGIN_VERSION = "0.7.1"
+PLUGIN_VERSION = "0.8.1"
 SETTINGS_GROUP = "GeoForge/LayerCrsDisplay"
 
 
@@ -37,7 +37,9 @@ class LayerCrsDisplayPlugin:
         self.toggle_action = None
         self.settings_action = None
         self.about_action = None
+        self.audit_action = None
         self.batch_action = None
+        self._audit_dialog = None
         self._batch_dialog = None
         self.toolbar = None
         self._layer_callbacks = {}
@@ -56,6 +58,8 @@ class LayerCrsDisplayPlugin:
             self._add_widgets_to_all_layers()
 
     def unload(self):
+        if self._audit_dialog is not None:
+            self._audit_dialog.reject()
         if self._batch_dialog is not None and self._batch_dialog.runner.active:
             self._batch_dialog.runner.finished.connect(
                 lambda *args: self._batch_dialog.reject()
@@ -92,6 +96,17 @@ class LayerCrsDisplayPlugin:
             "About…", self.iface.mainWindow()
         )
         self.about_action.triggered.connect(self.show_about)
+
+        self.audit_action = QAction(
+            QIcon(str(Path(__file__).with_name("audit_080.svg"))),
+            "CRS Audit",
+            self.iface.mainWindow(),
+        )
+        self.audit_action.setToolTip(
+            "Audit project layers for matching, different or missing CRS "
+            "definitions"
+        )
+        self.audit_action.triggered.connect(self.show_audit)
 
         self.batch_action = QAction(
             QIcon(str(Path(__file__).with_name("reproject_061.svg"))),
@@ -138,9 +153,13 @@ class LayerCrsDisplayPlugin:
             """
         )
         self.toolbar.addAction(self.toggle_action)
+        self.toolbar.addAction(self.audit_action)
         self.toolbar.addAction(self.batch_action)
         self._configure_toolbar_button(
             self.toggle_action, "GeoForgeDisplayCrsButton"
+        )
+        self._configure_toolbar_button(
+            self.audit_action, "GeoForgeCrsAuditButton"
         )
         self._configure_toolbar_button(
             self.batch_action, "GeoForgeReprojectButton"
@@ -150,6 +169,7 @@ class LayerCrsDisplayPlugin:
         )
         QTimer.singleShot(0, self._enforce_toolbar_button_style)
         self.iface.addPluginToMenu(PLUGIN_NAME, self.toggle_action)
+        self.iface.addPluginToMenu(PLUGIN_NAME, self.audit_action)
         self.iface.addPluginToMenu(PLUGIN_NAME, self.batch_action)
         self.iface.addPluginToMenu(PLUGIN_NAME, self.settings_action)
         self.iface.addPluginToMenu(PLUGIN_NAME, self.about_action)
@@ -189,6 +209,9 @@ class LayerCrsDisplayPlugin:
             self.toggle_action, "GeoForgeDisplayCrsButton"
         )
         self._configure_toolbar_button(
+            self.audit_action, "GeoForgeCrsAuditButton"
+        )
+        self._configure_toolbar_button(
             self.batch_action, "GeoForgeReprojectButton"
         )
 
@@ -201,6 +224,7 @@ class LayerCrsDisplayPlugin:
             self.toggle_action,
             self.settings_action,
             self.about_action,
+            self.audit_action,
             self.batch_action,
         ):
             if action is None:
@@ -215,16 +239,35 @@ class LayerCrsDisplayPlugin:
         self.toggle_action = None
         self.settings_action = None
         self.about_action = None
+        self.audit_action = None
         self.batch_action = None
 
-    def show_batch(self):
+    def show_audit(self):
+        from .audit_dialog import AuditDialog
+
+        self._audit_dialog = AuditDialog(self.iface.mainWindow())
+        result = self._audit_dialog.exec()
+        requested = list(self._audit_dialog.requested_layer_ids)
+        target_crs = self._audit_dialog.requested_target_crs
+        self._audit_dialog.deleteLater()
+        self._audit_dialog = None
+        if result == QDialog.DialogCode.Accepted and requested:
+            self.show_batch(requested, target_crs)
+
+    def show_batch(self, layer_ids=None, target_crs=None):
         from .batch_dialog import BatchDialog
+        if isinstance(layer_ids, bool):
+            layer_ids = None
         if self._batch_dialog is None:
             self._batch_dialog = BatchDialog(
                 self.iface, self.iface.mainWindow()
             )
         elif not self._batch_dialog.runner.active:
             self._batch_dialog.refresh()
+        if layer_ids and not self._batch_dialog.runner.active:
+            self._batch_dialog.prepare_layer_selection(
+                layer_ids, target_crs
+            )
         self._batch_dialog.exec()
 
     def show_settings(self):
