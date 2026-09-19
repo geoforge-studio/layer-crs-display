@@ -388,6 +388,33 @@ class BatchDialog(QDialog):
         self.preview()
         self.filter_rows()
 
+    def prepare_layer_selection(self, layer_ids):
+        """Use the project CRS and preselect eligible layers from CRS Audit."""
+        if self.runner.active:
+            return
+        requested = set(layer_ids)
+        self.target.blockSignals(True)
+        self.target.setCrs(self.project.crs())
+        self.target.blockSignals(False)
+        if self.auto_suffix:
+            authid = self.target.crs().authid().replace(':', '')
+            self.suffix.setText('_' + (authid or 'reprojected'))
+        self.manual_selection = False
+        self.refresh()
+        self.manual_selection = True
+        self.table.blockSignals(True)
+        for row, layer_id in enumerate(self.layer_ids):
+            item = self.table.item(row, 0)
+            eligible = bool(item.data(Qt.ItemDataRole.UserRole))
+            item.setCheckState(
+                Qt.CheckState.Checked
+                if eligible and layer_id in requested
+                else Qt.CheckState.Unchecked
+            )
+        self.table.blockSignals(False)
+        self.preview()
+        self.filter_rows()
+
     def selection_edited(self, item):
         if not self.refreshing and not self.runner.active and item.column()==0:
             self.manual_selection = True

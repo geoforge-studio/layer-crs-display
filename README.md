@@ -1,12 +1,14 @@
-# Layer CRS Display — 0.7.1
+# Layer CRS Display — 0.8.0
 
 Maintainer: GeoForge Studio | QGIS 3.22–4.x (declared range; tested by the maintainer in QGIS 3 and QGIS 4)
 
-The CRS toolbar has two compact, boxed, icon-only buttons ordered left to right.
+The CRS toolbar has three compact, boxed, icon-only buttons ordered left to right.
 Their full labels remain available in tooltips and the Plugins menu:
 
 - **Display CRS** (layers and eye): show or hide CRS information in the Layers
   panel. The icon and button border change between inactive and active states.
+- **CRS Audit** (checklist and magnifier): scan the current project on demand,
+  classify layers as OK, Different or Missing, and inspect CRS details.
 - **Reproject** (geographic grid, planar grid and arrow): open the batch
   reprojection dialog.
 
@@ -14,8 +16,10 @@ All plugin interface text, tooltips, messages and documentation are in English. 
 
 ## Quick start
 
-1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.7.1.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
-2. Click **Reproject**. The target CRS initially follows the project CRS and can be changed.
+1. Build the installation archive with `python tools/build_zip.py --release` (see below), then install `layer_crs_display_0.8.0.zip` through Plugins → Manage and Install Plugins → Install from ZIP. Restart QGIS.
+2. Click **CRS Audit** to review the project. Filter the table or select
+   `Different` layers and click **Send to Reproject**. You can also open
+   **Reproject** directly.
 3. Choose one output folder, a GeoPackage filename (default `reprojected.gpkg`) and a layer name suffix, such as `_UTM39`. `Roads` becomes `Roads_UTM39`. No numbering or prefix is automatically added.
 4. Eligible layers with a different CRS are initially selected. Use **Use panel selection** to use the Layers panel selection, or change checkboxes individually.
 5. Review the output names and click **Reproject**. Progress and the result for each layer are displayed.
@@ -27,6 +31,20 @@ All plugin interface text, tooltips, messages and documentation are in English. 
 Search filters the visible list without changing selection. The summary explicitly counts selected layers hidden by search. Selection buttons apply to all layers, including hidden search results.
 
 **Advanced options** expands to show raster resampling, adding outputs, hiding originals and changing the project CRS. Defaults are unchanged. Progress and the Reproject, Stop and Close buttons stay visible in a fixed footer while the form scrolls. Readiness guidance explains what must be completed before starting.
+
+## CRS Audit
+
+Audit runs only when its window opens or **Refresh** is clicked. It does not
+monitor the project in the background and never assigns or changes a CRS. `OK`
+means the layer CRS is valid and equivalent to the project CRS; `Different`
+means it is valid but differs from the project CRS; `Missing` means no valid
+source CRS is defined. Equivalence uses the same complete CRS comparison as
+Batch Reprojection rather than display-text equality.
+
+The table shows CRS label, type, datum and unit. Filters change visibility only.
+**Select Different** selects all mismatches, and **Send to Reproject** opens the
+existing Batch window with eligible selected layers checked and the project CRS
+as target. Missing CRS is never guessed or sent for conversion.
 
 ## Outputs and scope
 
@@ -91,7 +109,9 @@ version and platform.
 ## Publication status
 
 Version 0.5.4 is available through the official QGIS Plugins Repository as an
-experimental release. Version 0.7.1 is the stable dual-QGIS submission package.
+experimental release. Version 0.8.0 is the CRS Audit development candidate,
+built on the stable dual-QGIS 0.7.1 codebase. It remains experimental until the
+native acceptance workflow is completed in QGIS 3 and QGIS 4.
 Source code and support are hosted at
 [geoforge-studio/layer-crs-display](https://github.com/geoforge-studio/layer-crs-display).
 The public contact email is `reynolds.mach88@gmail.com`. Maintainer testing has

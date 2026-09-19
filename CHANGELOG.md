@@ -1,3 +1,14 @@
+# 0.8.0 — CRS Audit
+
+- Add an on-demand, read-only project audit between Display CRS and Reproject.
+- Classify each layer as `OK`, `Different` or `Missing` by comparing complete
+  CRS definitions with the project CRS.
+- Show EPSG/custom CRS label, CRS type, datum and unit with status filtering.
+- Summarize layer, distinct CRS, missing and different counts.
+- Send selected `Different` layers to the existing Batch Reprojection window,
+  preselected against the project CRS; never reproject a missing source CRS.
+- Keep Audit free of background monitoring and data or CRS mutations.
+
 # 0.7.1 — stable dual-QGIS release
 
 - Promote the QGIS 3/Qt5 and QGIS 4/Qt6 compatible 0.7.0 candidate to stable
