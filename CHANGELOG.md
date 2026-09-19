@@ -1,4 +1,4 @@
-# 0.8.1 — selectable reference CRS and clean outputs
+# 0.8.1 — stable CRS Audit release
 
 - Provide a selectable reference CRS, initially set to the project CRS, and
   classify each layer as `OK`, `Different` or `Missing` against that reference.
@@ -9,6 +9,7 @@
   the user-selected output directory.
 - Stop writing an automatic JSON sidecar report so a vector-only batch leaves
   exactly one final GeoPackage in an initially empty output directory.
+- Mark the release stable after the maintainer's functional smoke test.
 
 # 0.8.0 — initial CRS Audit candidate
 

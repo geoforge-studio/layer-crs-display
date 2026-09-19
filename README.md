@@ -105,16 +105,16 @@ Development tests stay in the source repository and are excluded from the instal
 small temporary vector/raster fixtures and checks transformed coordinates,
 attributes, categorical values, NoData and source preservation. See
 [testing instructions](docs/TESTING.md). The maintainer confirmed that the 0.7.0
-candidate works in both QGIS 3 and QGIS 4. Exact QGIS, Qt, GDAL, OS and full
+candidate works in both QGIS 3 and QGIS 4 and completed a functional smoke test
+of 0.8.1. Exact QGIS, Qt, GDAL, OS and full
 acceptance-suite results should still be recorded rather than inferred for every
 version and platform.
 
 ## Publication status
 
 Version 0.5.4 is available through the official QGIS Plugins Repository as an
-experimental release. Version 0.8.1 is the CRS Audit development candidate,
-built on the stable dual-QGIS 0.7.1 codebase. It remains experimental until the
-native acceptance workflow is completed in QGIS 3 and QGIS 4.
+experimental release. Version 0.8.1 is the stable CRS Audit release, built on
+the dual-QGIS 0.7.1 codebase. Its metadata is set to `experimental=False`.
 Source code and support are hosted at
 [geoforge-studio/layer-crs-display](https://github.com/geoforge-studio/layer-crs-display).
 The public contact email is `reynolds.mach88@gmail.com`. Maintainer testing has
