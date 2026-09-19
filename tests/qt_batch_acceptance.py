@@ -154,7 +154,7 @@ app=QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 opened_urls = []
 about = AboutDialog(
-    '0.8.0',
+    '0.8.1',
     url_opener=lambda url: opened_urls.append(url.toString()),
 )
 about.show()
@@ -173,7 +173,7 @@ email_button = about.findChild(QtWidgets.QPushButton, 'emailLink')
 assert email_button is not None
 email_button.click()
 assert opened_urls[-1] == 'mailto:reynolds.mach88@gmail.com'
-assert about.findChild(QtWidgets.QLabel, 'aboutVersion').text() == 'Version 0.8.0  |  QGIS 3 / 4'
+assert about.findChild(QtWidgets.QLabel, 'aboutVersion').text() == 'Version 0.8.1  |  QGIS 3 / 4'
 about.close()
 
 assert same_crs(CRS('EPSG:32639'), CRS('EPSG:32639'))
