@@ -1,3 +1,10 @@
+# 0.8.2 — stable package correction
+
+- Publish under a new version number so the corrected stable archive cannot be
+  confused with or cached as the earlier 0.8.1 test package.
+- Set `experimental=False` in the packaged metadata and retain the selectable
+  Audit reference CRS and clean final-only vector output behavior.
+
 # 0.8.1 — stable CRS Audit release
 
 - Provide a selectable reference CRS, initially set to the project CRS, and
